@@ -10,7 +10,7 @@ langchain-groq==0.1.2
 langgraph==0.0.30
 
 # Vector Database Client
-qdrant-client==1.8.0
+qdrant-client>=1.9.0
 langchain-qdrant==0.1.1
 
 # Local Embeddings Support

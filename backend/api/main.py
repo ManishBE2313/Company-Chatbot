@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import the LangGraph workflow builder
-from backend.ai.orchestrator.graph import build_graph
+from ai.orchestrator.graph import build_graph
 
 # Initialize the FastAPI application
 app = FastAPI(

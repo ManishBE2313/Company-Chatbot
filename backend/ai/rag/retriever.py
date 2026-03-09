@@ -1,47 +1,31 @@
 import os
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-
-def get_embeddings_model():
-    """
-    Initializes the BGE embedding model.
-    This model converts the user's text question into a vector so it can be 
-    matched against the document vectors in the database.
-    """
-    model_name = "BAAI/bge-small-en-v1.5"
-    
-    # Using CPU for local POC. Can be changed to 'cuda' if a GPU is available.
-    model_kwargs = {'device': 'cpu'}
-    # Normalizing embeddings ensures better cosine similarity search results
-    encode_kwargs = {'normalize_embeddings': True}
-    
-    return HuggingFaceBgeEmbeddings(
-        model_name=model_name,
-        model_kwargs=model_kwargs,
-        encode_kwargs=encode_kwargs
-    )
+from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 
 def get_retriever():
     """
-    Connects to the Qdrant vector database and returns a retrieval interface.
-    This assumes Person B (Data Pipeline) has already ingested documents 
-    into a collection named 'company_knowledge'.
+    Connects to the Qdrant Vector Database and retrieves 
+    the top 3 most relevant document chunks for a given query.
     """
-    # Qdrant connection details. For a local POC, it usually runs on localhost:6333
+    # 1. Load the local open-source embedding model 
+    # (This converts text into numbers so the AI can search by meaning, not just keywords)
+    embeddings = HuggingFaceBgeEmbeddings(
+        model_name="BAAI/bge-small-en-v1.5",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True}
+    )
+
+    # 2. Connect to the Qdrant database (defaulting to localhost)
     qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-    collection_name = "company_knowledge"
-    
-    # Initialize the Qdrant client
     client = QdrantClient(url=qdrant_url)
-    embeddings = get_embeddings_model()
-    
-    # Connect LangChain to the existing Qdrant collection
+
+    # 3. Connect to the specific collection holding our documents
     vector_store = QdrantVectorStore(
         client=client,
-        collection_name=collection_name,
-        embedding=embeddings
+        collection_name="company_documents",
+        embedding=embeddings,
     )
-    
-    # Return a retriever configured to fetch the top 5 most relevant document chunks
-    return vector_store.as_retriever(search_kwargs={"k": 5})
+
+    # 4. Return it as a retriever, asking for the top 3 best matches
+    return vector_store.as_retriever(search_kwargs={"k": 3})

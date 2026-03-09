@@ -1,17 +1,11 @@
 from langchain_core.prompts import ChatPromptTemplate
-from backend.ai.llm.client import get_worker_llm
-from backend.ai.prompts.system_prompts import get_worker_prompt
+from ai.llm.client import get_worker_llm
+from ai.prompts.system_prompts import get_worker_prompt
 
 def create_domain_node(domain_name):
     """
     Creates a LangGraph node function for a specific domain agent.
     This factory function generates the exact logic needed for HR, IT, or Finance agents.
-    
-    Args:
-        domain_name (str): The specific domain of the agent (e.g., "Human Resources").
-        
-    Returns:
-        function: A callable node function that LangGraph will execute.
     """
     # Initialize the faster Llama 3 worker model
     llm = get_worker_llm()
@@ -31,18 +25,11 @@ def create_domain_node(domain_name):
     def domain_node_function(state):
         """
         The actual function executed by LangGraph when routing to this specific agent.
-        
-        Args:
-            state (dict): The current state of the graph containing the user question and retrieved documents.
-            
-        Returns:
-            dict: A dictionary containing the final generated answer to update the graph state.
         """
         question = state.get("question")
         context_chunks = state.get("context", [])
         
         # Format the retrieved document chunks into a single readable string for the LLM
-        # We extract the 'source' metadata to ensure the LLM can cite its references properly
         formatted_context = "\n\n".join(
             [f"Document: {chunk.metadata.get('source', 'Unknown')}\nContent: {chunk.page_content}" 
              for chunk in context_chunks]

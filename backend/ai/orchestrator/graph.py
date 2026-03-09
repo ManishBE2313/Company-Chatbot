@@ -1,12 +1,12 @@
 from typing import TypedDict, Sequence
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import StateGraph, END
 from langchain_core.documents import Document
 
 # Import our previously created components
-from backend.ai.llm.client import get_routing_llm
-from backend.ai.prompts.system_prompts import get_supervisor_prompt
-from backend.ai.rag.retriever import get_retriever
-from backend.ai.agents.domain_agents import (
+from ai.llm.client import get_routing_llm
+from ai.prompts.system_prompts import get_supervisor_prompt
+from ai.rag.retriever import get_retriever
+from ai.agents.domain_agents import (
     hr_agent_node, 
     it_agent_node, 
     finance_agent_node, 
@@ -27,6 +27,7 @@ def supervisor_node(state: GraphState):
     The first node in the workflow. It uses the DeepSeek-R1 routing model
     to analyze the user's question and determine which agent should handle it.
     """
+    print("🚦 1. Supervisor Node Started...")
     question = state.get("question")
     llm = get_routing_llm()
     system_prompt = get_supervisor_prompt()
@@ -44,7 +45,8 @@ def supervisor_node(state: GraphState):
     valid_routes = ["hr_agent", "it_agent", "finance_agent", "general_agent"]
     if route_decision not in valid_routes:
         route_decision = "general_agent"
-        
+
+    print(f"✅ 1. Supervisor Node Finished! Route chosen: {route_decision}")    
     return {"route": route_decision}
 
 def retrieve_node(state: GraphState):
@@ -52,12 +54,13 @@ def retrieve_node(state: GraphState):
     Fetches the relevant document chunks from the Qdrant vector database.
     This runs after the supervisor but before the domain agents.
     """
+    print("🔍 2. Retriever Node Started...")
     question = state.get("question")
     retriever = get_retriever()
     
     # Retrieve top k documents based on semantic similarity
     documents = retriever.invoke(question)
-    
+    print("✅ 2. Retriever Node Finished!")
     return {"context": documents}
 
 def build_graph():
@@ -75,7 +78,7 @@ def build_graph():
     workflow.add_node("general_agent", general_agent_node)
     
     # Define the flow: START -> Supervisor -> Retriever
-    workflow.add_edge(START, "supervisor")
+    workflow.set_entry_point("supervisor")
     workflow.add_edge("supervisor", "retriever")
     
     # Define the conditional routing logic
