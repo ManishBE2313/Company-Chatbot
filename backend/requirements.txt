@@ -1,0 +1,17 @@
+# Web Framework & Server
+fastapi==0.110.0
+uvicorn==0.27.1
+python-dotenv==1.0.1
+
+# AI & Orchestration Framework
+langchain==0.1.13
+langchain-community==0.0.29
+langchain-groq==0.1.2
+langgraph==0.0.30
+
+# Vector Database Client
+qdrant-client==1.8.0
+langchain-qdrant==0.1.1
+
+# Local Embeddings Support
+sentence-transformers==2.5.1
