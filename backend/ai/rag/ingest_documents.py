@@ -9,7 +9,7 @@ from langchain_core.documents import Document
 
 
 DATA_FOLDER = "data"
-COLLECTION_NAME = "company_knowledge"
+collection_name = "company_documents"
 
 
 def get_embedding_model():
