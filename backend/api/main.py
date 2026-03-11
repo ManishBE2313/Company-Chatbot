@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -16,6 +17,11 @@ app = FastAPI(
     description="API for routing user queries to domain-specific AI agents.",
     version="1.0.0"
 )
+#  Add this tiny function at the top of your routes
+@app.get("/", include_in_schema=False)
+def read_root():
+    """Redirect the root URL directly to the Swagger UI docs."""
+    return RedirectResponse(url="/docs")
 
 # Fetch allowed CORS origins from the .env file.
 # Expects a comma-separated list like: "http://localhost:3000,http://localhost:8080"

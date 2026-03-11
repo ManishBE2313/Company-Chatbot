@@ -1,7 +1,10 @@
 import os
+
+from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
+
+COLLECTION_NAME = "company_documents"
 
 def get_retriever():
     """
@@ -23,7 +26,7 @@ def get_retriever():
     # 3. Connect to the specific collection holding our documents
     vector_store = QdrantVectorStore(
         client=client,
-        collection_name="company_documents",
+        collection_name=COLLECTION_NAME,
         embedding=embeddings,
     )
 
