@@ -19,7 +19,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add this tiny function at the top of your routes
+
 @app.get("/", include_in_schema=False)
 def read_root():
     """Redirect the root URL directly to the Swagger UI docs."""
@@ -60,7 +60,6 @@ async def chat_endpoint(request: ChatRequest):
     and returns the final retrieved answer and the route taken.
     """
     try:
-        # --- NEW SECURITY GUARDRAIL ---
         # Evaluate the user input for malicious prompt injection patterns.
         # If detected, immediately halt execution and return a 400 Bad Request.
         if is_prompt_injection(request.question):
@@ -68,7 +67,6 @@ async def chat_endpoint(request: ChatRequest):
                 status_code=400, 
                 detail="Security alert: Request blocked due to restricted keyword patterns."
             )
-        # ------------------------------
 
         # Initialize the graph state
         initial_state = {

@@ -46,7 +46,7 @@ def supervisor_node(state: GraphState):
     if route_decision not in valid_routes:
         route_decision = "general_agent"
 
-    print(f"✅ 1. Supervisor Node Finished! Route chosen: {route_decision}")    
+    print(f"1. Supervisor Node Finished! Route chosen: {route_decision}")    
     return {"route": route_decision}
 
 def retrieve_node(state: GraphState):
@@ -54,13 +54,13 @@ def retrieve_node(state: GraphState):
     Fetches the relevant document chunks from the Qdrant vector database.
     This runs after the supervisor but before the domain agents.
     """
-    print("🔍 2. Retriever Node Started...")
+    print("2. Retriever Node Started...")
     question = state.get("question")
     retriever = get_retriever()
     
     # Retrieve top k documents based on semantic similarity
     documents = retriever.invoke(question)
-    print("✅ 2. Retriever Node Finished!")
+    print("2. Retriever Node Finished!")
     return {"context": documents}
 
 def build_graph():
