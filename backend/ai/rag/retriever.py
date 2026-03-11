@@ -30,5 +30,5 @@ def get_retriever():
         embedding=embeddings,
     )
 
-    # 4. Return it as a retriever, asking for the top 3 best matches
-    return vector_store.as_retriever(search_kwargs={"k": 3})
+    # 4. Return it as a retriever, asking for the top 5 best matches
+    return vector_store.as_retriever(search_kwargs={"k": 5})
