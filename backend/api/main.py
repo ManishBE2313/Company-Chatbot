@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 # Load environment variables from the .env file before anything else
 load_dotenv()
 
-# Import the LangGraph workflow builder
+# Import the security guardrail and the LangGraph workflow builder
+from api.security import is_prompt_injection
 from ai.orchestrator.graph import build_graph
 
 # Initialize the FastAPI application
@@ -17,7 +18,8 @@ app = FastAPI(
     description="API for routing user queries to domain-specific AI agents.",
     version="1.0.0"
 )
-#  Add this tiny function at the top of your routes
+
+
 @app.get("/", include_in_schema=False)
 def read_root():
     """Redirect the root URL directly to the Swagger UI docs."""
@@ -58,6 +60,14 @@ async def chat_endpoint(request: ChatRequest):
     and returns the final retrieved answer and the route taken.
     """
     try:
+        # Evaluate the user input for malicious prompt injection patterns.
+        # If detected, immediately halt execution and return a 400 Bad Request.
+        if is_prompt_injection(request.question):
+            raise HTTPException(
+                status_code=400, 
+                detail="Security alert: Request blocked due to restricted keyword patterns."
+            )
+
         # Initialize the graph state
         initial_state = {
             "question": request.question,
@@ -76,5 +86,10 @@ async def chat_endpoint(request: ChatRequest):
             route_taken=final_state.get("route", "unknown")
         )
         
+    except HTTPException as he:
+        # Explicitly catch HTTPExceptions (like our security block) 
+        # so they return the correct status code (e.g., 400) to the client.
+        raise he
     except Exception as e:
+        # Catch all other unhandled internal processing errors as 500s.
         raise HTTPException(status_code=500, detail=str(e))
