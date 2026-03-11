@@ -1,4 +1,6 @@
 import os
+import re
+import hashlib
 from pathlib import Path
 
 from docling.document_converter import DocumentConverter
@@ -7,32 +9,135 @@ from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+
 BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_PATH = BASE_DIR / "data"
 COLLECTION_NAME = "company_documents"
 
+
+# -----------------------------
+# Document Hashing
+# -----------------------------
+
+def file_hash(path: Path) -> str:
+    """Generate MD5 hash for a file to avoid duplicate ingestion"""
+    with open(path, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+
+
+
+# -----------------------------
+# Cleaning
+# -----------------------------
+
+def clean_text(text: str) -> str:
+    """Remove noisy artifacts from parsed documents"""
+
+    # Remove page numbers like "Page 1", "Page 2"
+    text = re.sub(r'Page\s*\d+', '', text, flags=re.IGNORECASE)
+
+    # Remove multiple newlines
+    text = re.sub(r'\n+', '\n', text)
+
+    # Remove excessive whitespace
+    text = re.sub(r'\s+', ' ', text)
+
+    # Remove repeated header lines (very common in PDFs)
+    lines = text.split("\n")
+    unique_lines = []
+    prev = None
+
+    for line in lines:
+        if line.strip() != prev:
+            unique_lines.append(line)
+        prev = line.strip()
+
+    text = "\n".join(unique_lines)
+
+    return text.strip()
+
+
+# -----------------------------
+# Sensitive Data Redaction
+# -----------------------------
+
+
+def redact_sensitive_data(text: str) -> str:
+    """Replace sensitive information with placeholders"""
+
+    patterns = {
+        # Emails
+        "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b',
+
+        # Phone numbers (international + Indian)
+        "phone": r'(\+?\d{1,3}[\s\-]?)?\d{10}',
+
+        # Credit card numbers
+        "credit_card": r'\b(?:\d[ -]*?){13,16}\b',
+
+        # Salary patterns like "Salary: 50000" or "$50000"
+        "salary": r'(salary\s*[:\-]?\s*\$?\d+|\$\d{2,})'
+    }
+
+    text = re.sub(patterns["email"], "xxx@gmail.com", text)
+    text = re.sub(patterns["phone"], "9999999999", text)
+    text = re.sub(patterns["credit_card"], "CONFIDENTIAL_CARD", text)
+    text = re.sub(patterns["salary"], "salary: confidential", text, flags=re.IGNORECASE)
+
+    return text
+
+# -----------------------------
+# Load and Parse Documents
+# -----------------------------
+
 def load_documents():
-    """Parse documents using Docling"""
+    """Parse documents using Docling with cleaning and redaction"""
+
     if not DATA_PATH.exists():
         raise FileNotFoundError(
             f"Data directory not found: {DATA_PATH}. "
             "Place your source documents inside backend/data."
         )
 
-    if not DATA_PATH.is_dir():
-        raise NotADirectoryError(f"Expected a directory at: {DATA_PATH}")
-
     converter = DocumentConverter()
     docs = []
+
+    seen_hashes = set()
 
     for path in sorted(DATA_PATH.iterdir()):
         if not path.is_file():
             continue
 
+        # ---- HASH CHECK ----
+        h = file_hash(path)
+
+        if h in seen_hashes:
+            print(f"Skipping duplicate file: {path.name}")
+            continue
+
+        seen_hashes.add(h)
+
         print(f"Parsing {path.name} with Docling...")
+
         result = converter.convert(str(path))
         text = result.document.export_to_text()
-        docs.append(Document(page_content=text, metadata={"source": path.name}))
+
+        # ---- CLEANING ----
+        text = clean_text(text)
+
+        # ---- REDACTION ----
+        text = redact_sensitive_data(text)
+
+        docs.append(
+            Document(
+                page_content=text,
+                metadata={
+                    "source": path.name,
+                    "file_hash": h
+                }
+            )
+        )
 
     if not docs:
         raise ValueError(
@@ -40,6 +145,10 @@ def load_documents():
         )
 
     return docs
+
+# -----------------------------
+# Chunking
+# -----------------------------
 
 def chunk_documents(documents):
     """Split documents into chunks"""
@@ -51,6 +160,11 @@ def chunk_documents(documents):
     print(f"Created {len(chunks)} chunks")
     return chunks
 
+
+# -----------------------------
+# Embedding Model
+# -----------------------------
+
 def get_embedding_model():
     """Load BGE embedding model"""
     return HuggingFaceBgeEmbeddings(
@@ -58,6 +172,10 @@ def get_embedding_model():
         model_kwargs={"device": "cpu"},
         encode_kwargs={"normalize_embeddings": True},
     )
+
+# -----------------------------
+# Store in Qdrant
+# -----------------------------
 
 def store_in_qdrant(chunks):
     """Store embeddings in Qdrant"""
@@ -77,6 +195,8 @@ def store_in_qdrant(chunks):
     )
 
     print("Data successfully stored in Qdrant")
+
+# Run the pipeline
 
 def run_pipeline():
     docs = load_documents()
