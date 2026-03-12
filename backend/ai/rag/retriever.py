@@ -1,19 +1,24 @@
 import os
 
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
+
+from langchain_classic.retrievers import ContextualCompressionRetriever
+from langchain_classic.retrievers.document_compressors import CrossEncoderReranker
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
 COLLECTION_NAME = "company_documents"
 
 def get_retriever():
     """
-    Connects to the Qdrant Vector Database and retrieves 
-    the top 3 most relevant document chunks for a given query.
+    Connects to the Qdrant Vector Database, retrieves a large pool of documents,
+    and then applies a Cross-Encoder Re-ranker to return the absolute best 3 matches.
     """
     # 1. Load the local open-source embedding model 
-    # (This converts text into numbers so the AI can search by meaning, not just keywords)
-    embeddings = HuggingFaceBgeEmbeddings(
+    # Updated to use the modern HuggingFaceEmbeddings class
+    embeddings = HuggingFaceEmbeddings(
         model_name="BAAI/bge-small-en-v1.5",
         model_kwargs={"device": "cpu"},
         encode_kwargs={"normalize_embeddings": True}
@@ -30,5 +35,21 @@ def get_retriever():
         embedding=embeddings,
     )
 
-    # 4. Return it as a retriever, asking for the top 5 best matches
-    return vector_store.as_retriever(search_kwargs={"k": 5})
+    # 4. Create the base retriever
+    # We increase 'k' to 20 to cast a wide net
+    base_retriever = vector_store.as_retriever(search_kwargs={"k": 10})
+
+    # 5. Initialize the Cross-Encoder Re-ranker
+    # SWAPPED: Using a lightweight (~90MB) model to prevent network timeouts during download
+    reranker_model = HuggingFaceCrossEncoder(model_name="cross-encoder/ms-marco-MiniLM-L-6-v2")
+    
+    # Configure the compressor to only keep the top 3 highest-scoring chunks
+    compressor = CrossEncoderReranker(model=reranker_model, top_n=3)
+
+    # 6. Wrap the base retriever and the compressor together
+    compression_retriever = ContextualCompressionRetriever(
+        base_compressor=compressor,
+        base_retriever=base_retriever
+    )
+
+    return compression_retriever

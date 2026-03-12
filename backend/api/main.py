@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -18,7 +19,6 @@ app = FastAPI(
     description="API for routing user queries to domain-specific AI agents.",
     version="1.0.0"
 )
-
 
 @app.get("/", include_in_schema=False)
 def read_root():
@@ -46,6 +46,9 @@ workflow_app = build_graph()
 # Define the data structure expected from the client request
 class ChatRequest(BaseModel):
     question: str
+    # NEW: Allow the client to pass a unique session ID for conversational memory.
+    # If none is provided, it defaults to "default_thread".
+    thread_id: Optional[str] = "default_thread"
 
 # Define the data structure returned to the client
 class ChatResponse(BaseModel):
@@ -68,7 +71,9 @@ async def chat_endpoint(request: ChatRequest):
                 detail="Security alert: Request blocked due to restricted keyword patterns."
             )
 
-        # Initialize the graph state
+        # Initialize the graph state for this specific interaction.
+        # LangGraph's MemorySaver will automatically fetch the existing chat_history 
+        # for this thread_id and merge it with this new question.
         initial_state = {
             "question": request.question,
             "route": "",
@@ -76,8 +81,12 @@ async def chat_endpoint(request: ChatRequest):
             "answer": ""
         }
         
-        # Execute the LangGraph workflow
-        final_state = workflow_app.invoke(initial_state)
+        # NEW: Create the configuration dictionary containing the thread_id.
+        # This tells LangGraph exactly which memory bucket to read from and write to.
+        config = {"configurable": {"thread_id": request.thread_id}}
+        
+        # Execute the LangGraph workflow with the memory configuration
+        final_state = workflow_app.invoke(initial_state, config=config)
         
         # Return the extracted outputs
         return ChatResponse(
