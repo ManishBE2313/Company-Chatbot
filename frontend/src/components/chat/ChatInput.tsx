@@ -1,4 +1,3 @@
-// src/components/chat/ChatInput.tsx
 import * as React from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -11,15 +10,31 @@ interface ChatInputProps {
 
 /**
  * The bottom input bar for the chat interface.
- * Upgraded with enterprise-grade styling: soft shadows, generous padding, and a sleek submit button.
+ * Upgraded with an auto-resizing text area that expands up to 200px 
+ * and then becomes cleanly scrollable.
  */
 export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled }) => {
   const [input, setInput] = React.useState("");
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize magic: This adjusts the physical height of the textarea
+  // to match its internal scroll height whenever the text changes.
+  React.useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // First, reset height to auto so it shrinks when text is deleted
+      textarea.style.height = "auto";
+      // Then set the height to perfectly match the text inside it
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [input]);
 
   const handleSend = () => {
     if (input.trim() && !disabled) {
       onSend(input);
       setInput("");
+      // The useEffect above will automatically shrink the box back down 
+      // when 'input' becomes empty!
     }
   };
 
@@ -33,13 +48,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled }) => {
   return (
     <div className="relative flex w-full items-end gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all focus-within:shadow-[0_8px_30px_rgb(0,0,0,0.08)] focus-within:border-indigo-300/50">
       <TextArea
+        ref={textareaRef}
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Ask the enterprise AI..."
         disabled={disabled}
-        // Removing the default borders from the TextArea so it blends perfectly into this container
-        className="min-h-[44px] max-h-[200px] w-full border-0 bg-transparent px-2 py-2.5 shadow-none focus-visible:ring-0 sm:text-[15px] leading-relaxed"
+        // Added overflow-y-auto so the custom scrollbar appears if it hits max-h-[200px]
+        className="min-h-[44px] max-h-[200px] w-full border-0 bg-transparent px-2 py-2.5 shadow-none focus-visible:ring-0 sm:text-[15px] leading-relaxed overflow-y-auto"
         rows={1}
       />
       
