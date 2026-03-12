@@ -1,6 +1,5 @@
 import os
 
-# FIXED IMPORT: Uses the modern LangChain Hugging Face package to remove deprecation warnings
 from langchain_huggingface import HuggingFaceEmbeddings
 
 from langchain_qdrant import QdrantVectorStore
