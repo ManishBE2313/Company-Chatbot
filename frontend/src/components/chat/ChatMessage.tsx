@@ -1,4 +1,3 @@
-// src/components/chat/ChatMessage.tsx
 import * as React from "react";
 import { Message, Sender } from "@/types/chat";
 import { Avatar } from "@/components/ui/Avatar";
@@ -10,7 +9,7 @@ interface ChatMessageProps {
 
 /**
  * Renders a single chat bubble.
- * Automatically aligns and styles the bubble based on who sent the message.
+ * Upgraded with professional SaaS typography, structural alignment, and subtle borders.
  */
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isAI = message.sender === Sender.AI;
@@ -18,22 +17,34 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   return (
     <div
       className={cn(
-        "flex w-full items-start gap-4 py-4",
-        isAI ? "justify-start" : "justify-end flex-row-reverse"
+        "group flex w-full items-start gap-4 px-2 py-5 transition-colors",
+        !isAI && "flex-row-reverse"
       )}
     >
       <Avatar sender={message.sender} />
       
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-5 py-3 text-sm leading-relaxed shadow-sm",
-          isAI 
-            ? "bg-white border border-gray-100 text-gray-800" 
-            : "bg-blue-600 text-white"
+          "flex flex-col gap-1.5 max-w-[85%] sm:max-w-[75%]",
+          !isAI && "items-end"
         )}
       >
-        {/* We use whitespace-pre-wrap to respect line breaks from the AI's response */}
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        {/* Subtle name tag above the bubble */}
+        <span className="text-[13px] font-medium text-slate-400 px-1 select-none">
+          {isAI ? "Enterprise AI" : "You"}
+        </span>
+        
+        {/* The message bubble */}
+        <div
+          className={cn(
+            "rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed shadow-sm ring-1 ring-inset",
+            isAI 
+              ? "bg-white text-slate-800 ring-slate-200/60 rounded-tl-sm" 
+              : "bg-indigo-600 text-white ring-indigo-700 rounded-tr-sm"
+          )}
+        >
+          <p className="whitespace-pre-wrap tracking-[0.01em]">{message.content}</p>
+        </div>
       </div>
     </div>
   );
