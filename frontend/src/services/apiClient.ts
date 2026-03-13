@@ -1,6 +1,13 @@
+// src/services/apiClient.ts
 import { ChatApiRequest } from "@/types/chat";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+export interface CurrentUser {
+  email: string | null;
+  role?: string;
+  is_sso?: boolean;
+}
 
 /**
  * Opens a real-time Server-Sent Events (SSE) stream to the FastAPI backend.
@@ -17,6 +24,7 @@ export async function streamChatMessage(
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include", // <--- ADDED THIS LINE to send the SSO cookie
       body: JSON.stringify(request),
     });
 
@@ -61,7 +69,7 @@ export async function streamChatMessage(
               // Send the exact word directly to our React UI
               onChunk(parsed.content);
             }
-          } catch (e) {
+          } catch {
             // Ignore incomplete JSON chunks (they will be caught on the next pass)
           }
         }
@@ -70,5 +78,32 @@ export async function streamChatMessage(
   } catch (error) {
     console.error("Streaming API Client Error:", error);
     throw error;
+  }
+}
+
+export async function getCurrentUser(): Promise<CurrentUser> {
+  const response = await fetch(`${API_BASE_URL}/api/user/me`, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || `Server error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function logoutUser(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || `Server error: ${response.status}`);
   }
 }
