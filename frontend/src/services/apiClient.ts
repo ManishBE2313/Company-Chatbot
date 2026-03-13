@@ -1,6 +1,7 @@
+// src/services/apiClient.ts
 import { ChatApiRequest } from "@/types/chat";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /**
  * Opens a real-time Server-Sent Events (SSE) stream to the FastAPI backend.
@@ -17,6 +18,7 @@ export async function streamChatMessage(
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include", // <--- ADDED THIS LINE to send the SSO cookie
       body: JSON.stringify(request),
     });
 
