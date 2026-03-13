@@ -26,20 +26,30 @@ def read_root():
     """Redirect the root URL directly to the Swagger UI docs."""
     return RedirectResponse(url="/docs")
 
+# --- MODIFIED CORS CONFIGURATION ---
 # Fetch allowed CORS origins from the .env file.
-# Expects a comma-separated list like: "http://localhost:3000,http://localhost:8080"
-# Defaults to "*" only if the variable is completely missing.
-cors_origins_str = os.getenv("CORS_ALLOWED_ORIGINS", "*")
-allowed_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+# Expects a comma-separated list like: "http://localhost:3000,https://www.your-website.com"
+# Defaults to "" to handle the wildcard check below.
+cors_origins_str = os.getenv("CORS_ALLOWED_ORIGINS", "")
+
+if not cors_origins_str or cors_origins_str.strip() == "*":
+    # If no specific origins are provided, allow everything (Good for local testing)
+    allowed_origins = ["*"]
+    allow_credentials = False # Security rule: Cannot use credentials if origins = "*"
+else:
+    # If specific websites are provided, allow only them (Good for Production)
+    allowed_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+    allow_credentials = True
 
 # Configure CORS dynamically based on environment
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# -----------------------------------
 
 # Build the LangGraph application once at startup
 workflow_app = build_graph()

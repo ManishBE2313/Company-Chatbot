@@ -2,13 +2,18 @@ import os
 import re
 import hashlib
 from pathlib import Path
+from dotenv import load_dotenv
+# This calculates the path to your backend folder and finds the .env file there
+BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(BASE_DIR / ".env")
 
 from docling.document_converter import DocumentConverter
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
+from connectors.msgraph_connector import download_from_sharepoint
+from connectors.gdrive_connector import download_from_gdrive
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_PATH = BASE_DIR / "data"
@@ -199,6 +204,22 @@ def store_in_qdrant(chunks):
 # Run the pipeline
 
 def run_pipeline():
+    # 1. Fetch from Google Drive
+    folder_id = os.getenv("GDRIVE_FOLDER_ID")
+    if folder_id:
+        download_from_gdrive(folder_id=folder_id, download_path=DATA_PATH)
+    else:
+        print("Warning: No GDRIVE_FOLDER_ID found in .env. Skipping Google Drive sync.")
+
+    # 2. Fetch from SharePoint
+    # site_id = os.getenv("SHAREPOINT_SITE_ID")
+    # if site_id:
+    #     download_from_sharepoint(site_id=site_id, download_path=DATA_PATH)
+    # else:
+    #     print("Warning: No SHAREPOINT_SITE_ID found in .env. Skipping SharePoint sync.")
+    
+    # 3. Process ALL files (Google Drive, SharePoint, and Local Manual Files)
+    # Docling will read everything currently sitting in the DATA_PATH folder.
     docs = load_documents()
     chunks = chunk_documents(docs)
     store_in_qdrant(chunks)
