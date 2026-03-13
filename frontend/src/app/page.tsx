@@ -85,17 +85,24 @@
 "use client"; 
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useChat } from "@/hooks/useChat";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { Bot, MessageSquare, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { getCurrentUser, logoutUser } from "@/services/apiClient";
 
 export default function Home() {
   const { messages, isLoading, error, sendMessage } = useChat();
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const router = useRouter();
   
   // NEW: State to track if the widget is open or closed
   const [isOpen, setIsOpen] = React.useState(false);
+  const [userEmail, setUserEmail] = React.useState<string>("");
+  const [isProfileLoading, setIsProfileLoading] = React.useState(true);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   // Auto-scroll to the bottom whenever the messages array changes
   React.useEffect(() => {
@@ -103,6 +110,45 @@ export default function Home() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isOpen]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const loadCurrentUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (isMounted) {
+          setUserEmail(user.email || "");
+        }
+      } catch {
+        if (isMounted) {
+          setUserEmail("");
+        }
+      } finally {
+        if (isMounted) {
+          setIsProfileLoading(false);
+        }
+      }
+    };
+
+    loadCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logoutUser();
+    } catch (logoutError) {
+      console.error("Logout failed:", logoutError);
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
+  };
 
   return (
     // NEW: The main container is now fixed to the bottom-right corner
@@ -116,15 +162,31 @@ export default function Home() {
           <header className="flex h-14 shrink-0 items-center justify-between border-b bg-white px-4 shadow-sm">
             <div className="flex items-center gap-2 font-semibold text-gray-800">
               <Bot className="text-indigo-600" size={24} />
-              <span>Enterprise AI</span>
+              <div className="flex flex-col leading-tight">
+                <span>Enterprise AI</span>
+                <span className="text-[11px] font-normal text-gray-500">
+                  {isProfileLoading ? "Loading profile..." : `Welcome, ${userEmail || "User"}`}
+                </span>
+              </div>
             </div>
-            {/* NEW: Close Button */}
-            <button 
-              onClick={() => setIsOpen(false)}
-              className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-            >
-              <X size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={handleLogout}
+                isLoading={isLoggingOut}
+              >
+                Logout
+              </Button>
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                aria-label="Close chat"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </header>
 
           {/* Scrollable Chat Area */}

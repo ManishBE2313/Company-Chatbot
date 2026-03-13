@@ -125,3 +125,15 @@ async def chat_endpoint(request: ChatRequest, user: dict = Depends(get_current_u
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/api/user/me")
+async def get_current_user_profile(user: dict = Depends(get_current_user)):
+    """
+    Returns the currently authenticated user's basic profile information.
+    """
+    return {
+        "email": user.get("sub"),
+        "role": user.get("role"),
+        "is_sso": user.get("is_sso", False),
+    }

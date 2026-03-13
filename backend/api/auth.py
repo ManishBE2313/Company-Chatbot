@@ -5,7 +5,7 @@ import httpx
 import jwt
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from urllib.parse import urlencode
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -102,7 +102,7 @@ async def sso_login_callback(request: Request, code: str = None, state: str = No
     # 3. Generate our internal Chatbot Token
     app_token = create_jwt_token(
         {"sub": email_from_sso, "role": "employee", "is_sso": True}, 
-        timedelta(hours=8)
+        timedelta(hours=12)
     )
 
     redirect_response = RedirectResponse(url=FRONTEND_URL)
@@ -111,9 +111,26 @@ async def sso_login_callback(request: Request, code: str = None, state: str = No
         "httponly": True, 
         "samesite": "lax", 
         "secure": False, # Change to True in Production
-        "path": "/"
+        "path": "/",
+        "max_age":  12 * 60 * 60 # 12 hours in seconds
     }
     
     redirect_response.set_cookie(key="authcookie1", value=app_token, **cookie_settings)
     
     return redirect_response
+
+
+@router.post("/logout")
+async def logout():
+    """
+    Clears the chatbot session cookie.
+    """
+    response = JSONResponse({"success": True})
+    response.delete_cookie(
+        key="authcookie1",
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        path="/",
+    )
+    return response
