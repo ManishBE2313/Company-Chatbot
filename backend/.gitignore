@@ -3,7 +3,9 @@
 venv/
 env/
 ENV/
-
+google-credentials/
+# Ignore Google Cloud Credentials
+google-credentials.json
 # Python cache and compiled files
 __pycache__/
 *.py[cod]
