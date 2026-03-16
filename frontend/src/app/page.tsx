@@ -82,63 +82,28 @@
 
 
 // src/app/page.tsx
-"use client"; 
+"use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useChat } from "@/hooks/useChat";
-import { ChatMessage } from "@/components/chat/ChatMessage";
-import { ChatInput } from "@/components/chat/ChatInput";
-import { Bot, MessageSquare, X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { getCurrentUser, logoutUser } from "@/services/apiClient";
+import FloatingChatWidget from "@/components/chat/FloatingChatWidget";
+import { policiesData } from "@/data/policies";
+import { Power } from "lucide-react";
+import { logoutUser } from "@/services/apiClient";
 
 export default function Home() {
-  const { messages, isLoading, error, sendMessage } = useChat();
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const router = useRouter();
   
-  // NEW: State to track if the widget is open or closed
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [userEmail, setUserEmail] = React.useState<string>("");
-  const [isProfileLoading, setIsProfileLoading] = React.useState(true);
+  // States
+  const [activePolicyId, setActivePolicyId] = React.useState(policiesData[0].id);
+  const [isAZExpanded, setIsAZExpanded] = React.useState(true); // Controls the collapsible menu
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
-  // Auto-scroll to the bottom whenever the messages array changes
-  React.useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, isOpen]);
+  // Active Policy
+  const activePolicy = policiesData.find((p) => p.id === activePolicyId) || policiesData[0];
 
-  React.useEffect(() => {
-    let isMounted = true;
-
-    const loadCurrentUser = async () => {
-      try {
-        const user = await getCurrentUser();
-        if (isMounted) {
-          setUserEmail(user.email || "");
-        }
-      } catch {
-        if (isMounted) {
-          setUserEmail("");
-        }
-      } finally {
-        if (isMounted) {
-          setIsProfileLoading(false);
-        }
-      }
-    };
-
-    loadCurrentUser();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const handleLogout = async () => {
+  // Logout Handler for the sidebar
+  const handleSidebarLogout = async () => {
     try {
       setIsLoggingOut(true);
       await logoutUser();
@@ -151,99 +116,98 @@ export default function Home() {
   };
 
   return (
-    // NEW: The main container is now fixed to the bottom-right corner
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4 font-sans">
+    <div className="flex h-screen w-full bg-slate-50 font-sans text-slate-800">
       
-      {/* The Chat Window (Only renders if isOpen is true) */}
-      {isOpen && (
-        <div className="flex h-[550px] max-h-[80vh] w-[350px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-2xl transition-all sm:w-[400px]">
-          
-          {/* Header */}
-          <header className="flex h-14 shrink-0 items-center justify-between border-b bg-white px-4 shadow-sm">
-            <div className="flex items-center gap-2 font-semibold text-gray-800">
-              <Bot className="text-indigo-600" size={24} />
-              <div className="flex flex-col leading-tight">
-                <span>Enterprise AI</span>
-                <span className="text-[11px] font-normal text-gray-500">
-                  {isProfileLoading ? "Loading profile..." : `Welcome, ${userEmail || "User"}`}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-3 text-xs"
-                onClick={handleLogout}
-                isLoading={isLoggingOut}
-              >
-                Logout
-              </Button>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                aria-label="Close chat"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          </header>
-
-          {/* Scrollable Chat Area */}
-          <main className="flex-1 overflow-y-auto p-4">
-            <div className="flex flex-col gap-2">
-              
-              {messages.map((msg) => (
-                <ChatMessage key={msg.id} message={msg} />
-              ))}
-
-              {/* Loading Indicator */}
-              {isLoading && (
-                <div className="flex w-full items-start gap-3 py-2 justify-start">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-sm ring-1 ring-inset ring-indigo-600/20">
-                    <Bot size={16} />
-                  </div>
-                  <div className="flex items-center rounded-2xl bg-white border border-gray-100 px-4 py-3 shadow-sm h-[40px]">
-                    <span className="flex gap-1">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]"></span>
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]"></span>
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"></span>
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <div className="my-2 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-                  {error}
-                </div>
-              )}
-
-              {/* Invisible div to scroll to */}
-              <div ref={messagesEndRef} />
-            </div>
-          </main>
-
-          {/* Fixed Bottom Input Area */}
-          <footer className="shrink-0 bg-white p-3 border-t border-gray-100">
-            <ChatInput onSend={sendMessage} disabled={isLoading} />
-            <div className="mt-2 text-center text-[10px] text-gray-400">
-              AI can make mistakes. Verify important policies.
-            </div>
-          </footer>
+      {/* 1. Left Sidebar Navigation */}
+      <aside className="w-64 flex-shrink-0 border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
+        
+        {/* Logo / Header Area */}
+        <div className="h-20 flex items-center justify-center border-b border-slate-100 shrink-0">
+          <h1 className="font-bold text-blue-800 tracking-tight flex flex-col items-center leading-none mt-2">
+            <span className="text-[28px]">BE</span>
+            {/* Enlarged by ~1.75x (from 10px to 18px) */}
+            <span className="text-[18px] tracking-widest text-blue-600 mt-1">BLOCK EXCEL</span>
+          </h1>
         </div>
-      )}
 
-      {/* NEW: The Floating Bubble Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform hover:scale-105 active:scale-95 ${
-          isOpen ? "bg-red-500 hover:bg-red-600" : "hover:bg-indigo-700"
-        }`}
-      >
-        {isOpen ? <X size={26} /> : <MessageSquare size={26} />}
-      </button>
+        {/* Navigation Menu (Scrollable) */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar">
+          <div className="mb-4 px-3">
+            {/* Collapsible Toggle */}
+            <div 
+              onClick={() => setIsAZExpanded(!isAZExpanded)}
+              className="flex items-center justify-between bg-indigo-50 text-indigo-700 px-3 py-2 rounded-md text-sm font-medium cursor-pointer hover:bg-indigo-100 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-4 h-4 border border-indigo-300 rounded text-xs bg-white text-indigo-500 font-bold">
+                  {isAZExpanded ? "−" : "+"}
+                </span>
+                A-Z
+              </div>
+              <span className={`text-[10px] transition-transform duration-200 ${isAZExpanded ? "" : "-rotate-90"}`}>
+                ▼
+              </span>
+            </div>
+          </div>
+          
+          {/* Policy List (Conditional rendering based on isAZExpanded) */}
+          <ul className={`space-y-1 overflow-hidden transition-all duration-300 ${isAZExpanded ? "max-h-auto opacity-100" : "max-h-0 opacity-0"}`}>
+            {policiesData.map((policy) => {
+              const isActive = policy.id === activePolicyId;
+              return (
+                <li key={policy.id}>
+                  <button
+                    onClick={() => setActivePolicyId(policy.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-[14px] rounded-md transition-colors text-left ${
+                      isActive 
+                        ? "text-slate-800 font-semibold" 
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                    }`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-4 ${
+                      isActive ? 'bg-indigo-500 ring-indigo-100' : 'bg-slate-300 ring-transparent'
+                    }`} />
+                    {policy.title}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* USER Bottom Section */}
+        <div className="shrink-0 border-t border-slate-200 p-5 bg-white">
+          <div className="text-[11px] font-bold tracking-wider text-slate-400 mb-4 px-2 uppercase">USER</div>
+          <button 
+            onClick={handleSidebarLogout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-3 px-2 py-2 w-full text-slate-500 hover:text-slate-800 transition-colors text-[15px] font-medium disabled:opacity-50"
+          >
+            {/* Replaced the 'N' avatar with a clean power icon */}
+            <Power size={18} strokeWidth={2} className="text-slate-400" />
+            <span>{isLoggingOut ? "Logging out..." : "Log Out"}</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* 2. Main Content Area */}
+      <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative">
+        <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden min-h-[85vh]">
+          
+          <div className="border-b border-slate-200 bg-white px-8 py-6 text-center">
+            <h2 className="text-[16px] font-semibold text-slate-600 uppercase tracking-wide">
+              {activePolicy.title} POLICY AND COMPLAINT PROCEDURE
+            </h2>
+          </div>
+          
+          <div className="p-8 lg:p-10 text-slate-700 leading-relaxed whitespace-pre-wrap text-[15px]">
+            {activePolicy.content}
+          </div>
+        </div>
+      </main>
+
+      {/* 3. The Isolated Floating Chat Widget */}
+      <FloatingChatWidget />
 
     </div>
   );
