@@ -72,9 +72,9 @@ async def process_cv_pipeline(payload: CVScreeningRequest):
         collection_name = "job_targets"
 
         # Search the database for vectors matching THIS specific Job ID
-        search_result = q_client.search(
+        query_response = q_client.query_points(
             collection_name=collection_name,
-            query_vector=cv_vector,
+            query=cv_vector,
             query_filter=Filter(
                 must=[
                     FieldCondition(
@@ -83,8 +83,9 @@ async def process_cv_pipeline(payload: CVScreeningRequest):
                     )
                 ]
             ),
-            limit=2  # We only expect 2 targets per job: ICP and HyDE
+            limit=2,  # We only expect 2 targets per job: ICP and HyDE
         )
+        search_result = getattr(query_response, "points", None) or getattr(query_response, "result", [])
 
         # 5. Calculate Semantic Score & Extract ICP Text
         if not search_result:
