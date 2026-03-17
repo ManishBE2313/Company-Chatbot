@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import httpx
 import tempfile
 import fitz  # PyMuPDF library for extracting text from PDFs
@@ -13,6 +14,35 @@ from ai.agents.extraction_agent import extract_structured_cv
 from ai.agents.scoring_agent import run_tier_3_scoring
 
 router = APIRouter(prefix="/api/ai", tags=["cv-intake"])
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = BACKEND_DIR.parent
+
+def resolve_local_resume_path(resume_path: str) -> Path | None:
+    requested_name = Path(resume_path).name
+    candidate_paths = [
+        Path(resume_path),
+        BACKEND_DIR / resume_path,
+        PROJECT_ROOT / resume_path,
+        BACKEND_DIR / "uploads" / requested_name,
+        PROJECT_ROOT / "uploads" / requested_name,
+    ]
+
+    for candidate_path in candidate_paths:
+        if candidate_path.exists() and candidate_path.is_file():
+            return candidate_path.resolve()
+
+    normalized_requested_name = requested_name.replace(" ", "")
+    for uploads_dir in (BACKEND_DIR / "uploads", PROJECT_ROOT / "uploads"):
+        if not uploads_dir.exists():
+            continue
+        for candidate_path in uploads_dir.iterdir():
+            if not candidate_path.is_file():
+                continue
+            if candidate_path.name.replace(" ", "") == normalized_requested_name:
+                return candidate_path.resolve()
+
+    return None
 
 class CVScreeningRequest(BaseModel):
     applicationId: str = Field(..., min_length=1)
@@ -32,28 +62,46 @@ async def process_cv_pipeline(payload: CVScreeningRequest):
     try:
         print(f"[{payload.applicationId}] Starting Semantic Screening Pipeline...")
 
-        # 1. Download the CV from the URL
-        async with httpx.AsyncClient() as client:
-            response = await client.get(payload.resumeUrl)
-            response.raise_for_status()
-            pdf_bytes = response.content
-
-        # 2. Store it temporarily and extract text
         cv_text = ""
-        # We create a temporary file to hold the PDF data
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-            temp_pdf.write(pdf_bytes)
-            temp_pdf_path = temp_pdf.name
+        pdf_to_open = None
+        temp_pdf_path = None
+        resume_path = payload.resumeUrl.strip()
+
+        # Check if the URL is an external link (http/https) or a local file path
+        if resume_path.startswith("http://") or resume_path.startswith("https://"):
+            # 1. Download the CV from the URL
+            print(f"      -> Downloading CV from web URL...")
+            async with httpx.AsyncClient() as client:
+                response = await client.get(resume_path)
+                response.raise_for_status()
+                pdf_bytes = response.content
+
+            # We create a temporary file to hold the PDF data
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                temp_pdf.write(pdf_bytes)
+                temp_pdf_path = temp_pdf.name
+            
+            pdf_to_open = temp_pdf_path
+        else:
+            print(f"      -> Reading CV from local system: {resume_path}")
+            local_resume_path = resolve_local_resume_path(resume_path)
+            if not local_resume_path:
+                raise FileNotFoundError(f"Could not find local resume file at: {resume_path}")
+            pdf_to_open = str(local_resume_path)
 
         try:
-            # Open the temporary PDF file and extract text from all pages
-            doc = fitz.open(temp_pdf_path)
+            # 2. Open the PDF file and extract text from all pages
+            doc = fitz.open(pdf_to_open)
             for page in doc:
                 cv_text += page.get_text()
             doc.close()
         finally:
             # CRITICAL: Always delete the temporary file from the server to prevent disk bloat
-            os.remove(temp_pdf_path)
+            # (Notice we only delete if temp_pdf_path exists, protecting your local files!)
+            if temp_pdf_path and os.path.exists(temp_pdf_path):
+                os.remove(temp_pdf_path)
+
+        print(f"\n[DEBUG EXTRACTED TEXT]: {cv_text[:200]}...\n")
 
         if not cv_text.strip():
             raise ValueError("Could not extract any text from the provided PDF.")
@@ -72,20 +120,24 @@ async def process_cv_pipeline(payload: CVScreeningRequest):
         collection_name = "job_targets"
 
         # Search the database for vectors matching THIS specific Job ID
-        query_response = q_client.query_points(
-            collection_name=collection_name,
-            query=cv_vector,
-            query_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="jobId",
-                        match=MatchValue(value=payload.jobId)
-                    )
-                ]
-            ),
-            limit=2,  # We only expect 2 targets per job: ICP and HyDE
-        )
-        search_result = getattr(query_response, "points", None) or getattr(query_response, "result", [])
+        if q_client.collection_exists(collection_name):
+            query_response = q_client.query_points(
+                collection_name=collection_name,
+                query=cv_vector,
+                query_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="jobId",
+                            match=MatchValue(value=payload.jobId)
+                        )
+                    ]
+                ),
+                limit=2,  # We only expect 2 targets per job: ICP and HyDE
+            )
+            search_result = getattr(query_response, "points", None) or getattr(query_response, "result", [])
+        else:
+            print(f"[{payload.applicationId}] Warning: Qdrant collection '{collection_name}' does not exist yet.")
+            search_result = []
 
         # 5. Calculate Semantic Score & Extract ICP Text
         if not search_result:
@@ -114,6 +166,8 @@ async def process_cv_pipeline(payload: CVScreeningRequest):
             # TIER 2: Structured JSON Extraction
             # ==========================================
             structured_cv = extract_structured_cv(cv_text)
+            import json
+            print(f"\n[DEBUG TIER 2 JSON]: {json.dumps(structured_cv, indent=2)}\n")
             
             if not structured_cv:
                 # Fallback if the LLM completely crashed (failsafe to ensure they aren't auto-rejected)
