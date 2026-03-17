@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from "express";
 import candidateRouter from "./routes/candidate";
 import webhookRouter from "./routes/webhook";
+import jobRouter from "./routes/job";
 import Errors from "./errors";
 
 const app = express();
@@ -14,6 +15,7 @@ app.get("/health", (_req: Request, res: Response) => {
 
 app.use("/api/candidates", candidateRouter);
 app.use("/api/webhooks", webhookRouter);
+app.use("/api/jobs", jobRouter);
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(new Errors.BadRequestError(`Route not found: ${req.method} ${req.originalUrl}`));

@@ -14,6 +14,7 @@ from ai.orchestrator.graph import build_graph
 from api.auth import router as auth_router
 from api.dependencies import get_current_user
 from api.candidate_intake import router as candidate_intake_router
+from api.job_setup import router as job_setup_router
 
 app = FastAPI(
     title="Knowledge AI API",
@@ -23,6 +24,7 @@ app = FastAPI(
 
 app.include_router(auth_router)
 app.include_router(candidate_intake_router)
+app.include_router(job_setup_router)
 
 @app.get("/", include_in_schema=False)
 def read_root():
