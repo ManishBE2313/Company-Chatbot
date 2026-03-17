@@ -6,7 +6,7 @@ export interface JobApplicationAttributes {
   candidateId: string;
   jobId: string;
   resumeUrl: string;
-  status: "Pending" | "Passed" | "Rejected" | "Interviewing" | "Offered";
+  status: "Pending" | "Passed" | "Rejected" | "Interviewing" | "Offered" | "ManualReview";
   aiScore?: number | null;
   aiTags?: Record<string, unknown> | unknown[] | null;
   aiReasoning?: string | null;
@@ -54,7 +54,7 @@ export default function JobApplicationModel(
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM("Pending", "Passed", "Rejected", "Interviewing", "Offered"),
+        type: DataTypes.ENUM("Pending", "Passed", "Rejected", "Interviewing", "Offered", "ManualReview"),
         defaultValue: "Pending",
       },
       aiScore: {

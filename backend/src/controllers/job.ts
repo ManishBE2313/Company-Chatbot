@@ -3,12 +3,8 @@ import { JobService } from "../services/job";
 import { validateQueryParams, QueryValidationRules, lengthsOfFields } from "../utils/validation";
 
 export class JobController {
-  /**
-   * Handles the creation of a new Job and its Criteria.
-   */
   public static async createJob(req: any, res: Response, next: NextFunction) {
     try {
-      // 1. Define strict validation rules based on your existing utility
       const validationRules: QueryValidationRules = {
         title: { type: "string", required: true, max: lengthsOfFields.title },
         department: { type: "string", required: true, max: lengthsOfFields.generic },
@@ -17,14 +13,10 @@ export class JobController {
         requirements: { type: "object", required: true },
       };
 
-      // 2. Validate the incoming request body
-      // If validation fails, this will throw a BadRequestError which your global error handler catches
       validateQueryParams(req.body, validationRules);
 
-      // 3. Pass the clean, validated data to the Service layer
       const result = await JobService.createJobWithCriteria(req.body);
 
-      // 4. Return a successful response to the client
       res.status(201).json({
         message: "Job created successfully. AI target generation initiated.",
         data: {
@@ -34,7 +26,51 @@ export class JobController {
         },
       });
     } catch (err) {
-      // Pass any errors (like validation or database errors) to your global Express error handler
+      next(err);
+    }
+  }
+
+  public static async listJobs(req: any, res: Response, next: NextFunction) {
+    try {
+      const validationRules: QueryValidationRules = {
+        status: {
+          type: "enum",
+          required: false,
+          values: ["Draft", "Open", "Paused", "Closed"],
+        },
+      };
+
+      validateQueryParams(req.query, validationRules);
+
+      const result = await JobService.listJobsForHR(req.query.status);
+
+      res.status(200).json({
+        data: result.jobs,
+        meta: {
+          total: result.total,
+          statusCounts: result.statusCounts,
+          filter: {
+            status: req.query.status ?? null,
+          },
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async getJobById(req: any, res: Response, next: NextFunction) {
+    try {
+      const validationRules: QueryValidationRules = {
+        jobId: { type: "uuid", required: true },
+      };
+
+      validateQueryParams(req.params, validationRules);
+
+      const job = await JobService.getJobForHR(req.params.jobId);
+
+      res.status(200).json({ data: job });
+    } catch (err) {
       next(err);
     }
   }

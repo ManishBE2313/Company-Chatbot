@@ -82,27 +82,40 @@
 
 
 // src/app/page.tsx
+// src/app/page.tsx
+// Updated: added HR Portal navigation button for admin/superadmin users.
+// All existing policy viewer + floating chat widget behaviour is unchanged.
+
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import FloatingChatWidget from "@/components/chat/FloatingChatWidget";
 import { policiesData } from "@/data/policies";
-import { Power } from "lucide-react";
-import { logoutUser } from "@/services/apiClient";
+import { Power, ShieldCheck } from "lucide-react";
+import { logoutUser, getCurrentUser } from "@/services/apiClient";
 
 export default function Home() {
   const router = useRouter();
-  
-  // States
+
   const [activePolicyId, setActivePolicyId] = React.useState(policiesData[0].id);
-  const [isAZExpanded, setIsAZExpanded] = React.useState(true); // Controls the collapsible menu
+  const [isAZExpanded, setIsAZExpanded] = React.useState(true);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
-  // Active Policy
-  const activePolicy = policiesData.find((p) => p.id === activePolicyId) || policiesData[0];
+  // Fetch role so we can conditionally show the HR Portal link.
+  // Reuses the existing getCurrentUser call from apiClient.ts — no new endpoint needed.
+  const [userRole, setUserRole] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    getCurrentUser()
+      .then((u) => setUserRole(u.role ?? "employee"))
+      .catch(() => setUserRole("employee"));
+  }, []);
 
-  // Logout Handler for the sidebar
+  const isAdmin = userRole === "admin" || userRole === "superadmin";
+
+  const activePolicy =
+    policiesData.find((p) => p.id === activePolicyId) || policiesData[0];
+
   const handleSidebarLogout = async () => {
     try {
       setIsLoggingOut(true);
@@ -117,24 +130,22 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-full bg-slate-50 font-sans text-slate-800">
-      
-      {/* 1. Left Sidebar Navigation */}
+
+      {/* ── Left Sidebar ── */}
       <aside className="w-64 flex-shrink-0 border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
-        
-        {/* Logo / Header Area */}
+
+        {/* Logo */}
         <div className="h-20 flex items-center justify-center border-b border-slate-100 shrink-0">
           <h1 className="font-bold text-blue-800 tracking-tight flex flex-col items-center leading-none mt-2">
             <span className="text-[28px]">BE</span>
-            {/* Enlarged by ~1.75x (from 10px to 18px) */}
             <span className="text-[18px] tracking-widest text-blue-600 mt-1">BLOCK EXCEL</span>
           </h1>
         </div>
 
-        {/* Navigation Menu (Scrollable) */}
+        {/* Policy nav — unchanged from original */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar">
           <div className="mb-4 px-3">
-            {/* Collapsible Toggle */}
-            <div 
+            <div
               onClick={() => setIsAZExpanded(!isAZExpanded)}
               className="flex items-center justify-between bg-indigo-50 text-indigo-700 px-3 py-2 rounded-md text-sm font-medium cursor-pointer hover:bg-indigo-100 transition-colors select-none"
             >
@@ -149,8 +160,7 @@ export default function Home() {
               </span>
             </div>
           </div>
-          
-          {/* Policy List (Conditional rendering based on isAZExpanded) */}
+
           <ul className={`space-y-1 overflow-hidden transition-all duration-300 ${isAZExpanded ? "max-h-auto opacity-100" : "max-h-0 opacity-0"}`}>
             {policiesData.map((policy) => {
               const isActive = policy.id === activePolicyId;
@@ -159,13 +169,13 @@ export default function Home() {
                   <button
                     onClick={() => setActivePolicyId(policy.id)}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-[14px] rounded-md transition-colors text-left ${
-                      isActive 
-                        ? "text-slate-800 font-semibold" 
+                      isActive
+                        ? "text-slate-800 font-semibold"
                         : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                     }`}
                   >
                     <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-4 ${
-                      isActive ? 'bg-indigo-500 ring-indigo-100' : 'bg-slate-300 ring-transparent'
+                      isActive ? "bg-indigo-500 ring-indigo-100" : "bg-slate-300 ring-transparent"
                     }`} />
                     {policy.title}
                   </button>
@@ -175,40 +185,51 @@ export default function Home() {
           </ul>
         </nav>
 
-        {/* USER Bottom Section */}
+        {/* ── Bottom user section ── */}
         <div className="shrink-0 border-t border-slate-200 p-5 bg-white">
-          <div className="text-[11px] font-bold tracking-wider text-slate-400 mb-4 px-2 uppercase">USER</div>
-          <button 
+          <div className="text-[11px] font-bold tracking-wider text-slate-400 mb-4 px-2 uppercase">
+            User
+          </div>
+
+          {/* HR Portal button — only shown to admin / superadmin */}
+          {isAdmin && (
+            <button
+              onClick={() => router.push("/hr")}
+              className="flex items-center gap-3 px-2 py-2 w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors text-[14px] font-medium mb-1"
+            >
+              <ShieldCheck size={16} className="text-indigo-500" />
+              <span>HR Portal</span>
+            </button>
+          )}
+
+          {/* Logout — unchanged */}
+          <button
             onClick={handleSidebarLogout}
             disabled={isLoggingOut}
             className="flex items-center gap-3 px-2 py-2 w-full text-slate-500 hover:text-slate-800 transition-colors text-[15px] font-medium disabled:opacity-50"
           >
-            {/* Replaced the 'N' avatar with a clean power icon */}
             <Power size={18} strokeWidth={2} className="text-slate-400" />
             <span>{isLoggingOut ? "Logging out..." : "Log Out"}</span>
           </button>
         </div>
       </aside>
 
-      {/* 2. Main Content Area */}
+      {/* ── Main content — completely unchanged ── */}
       <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative">
         <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden min-h-[85vh]">
-          
           <div className="border-b border-slate-200 bg-white px-8 py-6 text-center">
             <h2 className="text-[16px] font-semibold text-slate-600 uppercase tracking-wide">
               {activePolicy.title} POLICY AND COMPLAINT PROCEDURE
             </h2>
           </div>
-          
           <div className="p-8 lg:p-10 text-slate-700 leading-relaxed whitespace-pre-wrap text-[15px]">
             {activePolicy.content}
           </div>
         </div>
       </main>
 
-      {/* 3. The Isolated Floating Chat Widget */}
+      {/* Floating chat widget — unchanged */}
       <FloatingChatWidget />
-
     </div>
   );
 }
