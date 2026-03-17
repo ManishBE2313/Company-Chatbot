@@ -3,8 +3,7 @@ import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
 
 export interface JobCriteriaAttributes {
   id: string;
-  title: string;
-  department?: string;
+  jobId: string;
   requirements: Record<string, unknown>;
   isActive?: boolean;
 }
@@ -27,13 +26,15 @@ export default function JobCriteriaModel(
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      title: {
-        type: DataTypes.STRING,
+      jobId: {
+        type: DataTypes.UUID,
+        field: "job_id",
         allowNull: false,
-      },
-      department: {
-        type: DataTypes.STRING,
-        allowNull: true,
+        unique: true,
+        references: {
+          model: "jobs",
+          key: "id",
+        },
       },
       requirements: {
         type: DataTypes.JSONB,
@@ -56,9 +57,9 @@ export default function JobCriteriaModel(
   };
 
   JobCriteria.associate = (models: any) => {
-    JobCriteria.hasMany(models.candidate, {
+    JobCriteria.belongsTo(models.job, {
       foreignKey: "jobId",
-      as: "candidates",
+      as: "job",
     });
   };
 

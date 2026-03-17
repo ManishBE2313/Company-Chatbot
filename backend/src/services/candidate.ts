@@ -21,7 +21,12 @@ export class CandidateService {
     try {
       transaction = await getTransaction();
 
-      const jobCriteria = await CandidateRepository.findActiveJobCriteria(
+      const job = await CandidateRepository.findOpenJob(payload.jobId, transaction);
+      if (!job) {
+        throw new Errors.BadRequestError("Open job not found for the supplied jobId.");
+      }
+
+      const jobCriteria = await CandidateRepository.findActiveJobCriteriaByJobId(
         payload.jobId,
         transaction
       );
@@ -30,9 +35,23 @@ export class CandidateService {
         throw new Errors.BadRequestError("Active job criteria not found for the supplied jobId.");
       }
 
-      const newCandidate = await CandidateRepository.createCandidate(
+      let candidate = await CandidateRepository.findCandidateByEmail(payload.email, transaction);
+      if (!candidate) {
+        candidate = await CandidateRepository.createCandidate(
+          {
+            firstName: payload.firstName,
+            lastName: payload.lastName,
+            email: payload.email,
+          },
+          transaction
+        );
+      }
+
+      const application = await CandidateRepository.createJobApplication(
         {
-          ...payload,
+          candidateId: candidate.id,
+          jobId: payload.jobId,
+          resumeUrl: payload.resumeUrl,
           status: "Pending",
         },
         transaction
@@ -49,7 +68,8 @@ export class CandidateService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          candidateId: newCandidate.id,
+          applicationId: application.id,
+          candidateId: candidate.id,
           resumeUrl: payload.resumeUrl,
           jobId: payload.jobId,
           webhookUrl,
@@ -63,10 +83,13 @@ export class CandidateService {
         })
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : "Unknown error";
-          console.error(`Failed to trigger AI screening for candidate ${newCandidate.id}: ${message}`);
+          console.error(`Failed to trigger AI screening for application ${application.id}: ${message}`);
         });
 
-      return newCandidate;
+      return {
+        candidate,
+        application,
+      };
     } catch (error) {
       if (transaction) {
         await transaction.rollback();

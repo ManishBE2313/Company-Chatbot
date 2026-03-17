@@ -19,3 +19,7 @@ sentence-transformers==2.5.1
 
 # Document ingestion
 docling
+
+# Add these to your existing requirements.txt
+PyMuPDF==1.23.21      # For fast, reliable PDF text extraction (imported as 'fitz')
+httpx==0.27.0         # For async HTTP requests (downloading CVs and sending webhooks)
