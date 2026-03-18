@@ -10,6 +10,7 @@ import { useJobs, useHRCurrentUser } from "@/hooks/useHRData";
 import { CreateJobModal } from "@/components/hr/CreateJobModal";
 import { UploadCVModal } from "@/components/hr/UploadCVModal";
 import { Button } from "@/components/ui/Button";
+import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 import {
   Briefcase,
   Plus,
@@ -17,7 +18,6 @@ import {
   MapPin,
   Users,
   ChevronRight,
-  Loader2,
 } from "lucide-react";
 import { Job } from "@/types/hr";
 
@@ -68,7 +68,7 @@ export default function HRDashboardPage() {
       {/* ── Jobs grid ── */}
       {isLoading ? (
         <div className="flex items-center justify-center py-24 text-slate-400">
-          <Loader2 size={24} className="animate-spin" />
+          <AsanaSpinner size="lg" />
         </div>
       ) : jobs.length === 0 ? (
         // Empty state — shown to new admins before any jobs exist

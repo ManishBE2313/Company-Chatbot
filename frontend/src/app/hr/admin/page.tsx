@@ -7,11 +7,11 @@ import { useJobs, useHRCurrentUser } from "@/hooks/useHRData";
 import { getAllApplications } from "@/services/hrApiClient";
 import { ApplicationDetailDrawer } from "@/components/hr/ApplicationDetailDrawer";
 import { StatusBadge, AIScoreChip } from "@/components/hr/StatusBadge";
+import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 import { Application, Job } from "@/types/hr";
 import {
   ShieldCheck,
   AlertTriangle,
-  Loader2,
   TrendingUp,
   Users,
   Briefcase,
@@ -123,7 +123,7 @@ export default function AdminPanelPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-slate-400">
-        <Loader2 size={24} className="animate-spin" />
+        <AsanaSpinner size="lg" />
       </div>
     );
   }

@@ -12,6 +12,7 @@ import { StatsCard } from "@/components/hr/StatsCard";
 import { ApplicationDetailDrawer } from "@/components/hr/ApplicationDetailDrawer";
 import { UploadCVModal } from "@/components/hr/UploadCVModal";
 import { Button } from "@/components/ui/Button";
+import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 import { Application, ApplicationStatus } from "@/types/hr";
 import {
   ArrowLeft,
@@ -19,7 +20,6 @@ import {
   MapPin,
   Users,
   Briefcase,
-  Loader2,
   Inbox,
 } from "lucide-react";
 import Link from "next/link";
@@ -208,7 +208,7 @@ export default function JobApplicationsPage() {
 
         {appsLoading ? (
           <div className="flex items-center justify-center py-24 text-slate-400">
-            <Loader2 size={22} className="animate-spin" />
+            <AsanaSpinner size="lg" />
           </div>
         ) : applications.length === 0 ? (
           // Empty state per tab

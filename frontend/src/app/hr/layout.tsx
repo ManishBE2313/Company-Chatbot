@@ -18,8 +18,8 @@ import {
   ShieldCheck,
   Power,
   ChevronRight,
-  Loader2,
 } from "lucide-react";
+import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 
 // ─── Nav item definition ──────────────────────────────────────────────────────
 // Each item optionally requires a minimum role to be visible.
@@ -130,7 +130,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
         <div className="shrink-0 border-t border-white/5 px-3 py-3">
           {isLoading ? (
             <div className="flex items-center gap-2 px-2">
-              <Loader2 size={14} className="animate-spin text-slate-500" />
+              <AsanaSpinner size="sm" className="text-slate-500" />
               <span className="text-[12px] text-slate-500">Loading...</span>
             </div>
           ) : (

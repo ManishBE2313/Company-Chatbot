@@ -8,7 +8,8 @@ import { ApplicationRow } from "@/components/hr/ApplicationRow";
 import { ApplicationDetailDrawer } from "@/components/hr/ApplicationDetailDrawer";
 import { Application, ApplicationStatus, Job } from "@/types/hr";
 import { cn } from "@/utils/classNames";
-import { Search, Filter, Loader2, Inbox, ChevronDown } from "lucide-react";
+import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
+import { Search, Filter, Inbox, ChevronDown } from "lucide-react";
 
 const STATUS_OPTIONS: { label: string; value: ApplicationStatus | "All" }[] = [
   { label: "All Statuses", value: "All" },
@@ -121,7 +122,7 @@ export default function AllApplicationsPage() {
       <div className="flex-1 overflow-y-auto bg-white">
         {isLoading ? (
           <div className="flex items-center justify-center py-24 text-slate-400">
-            <Loader2 size={22} className="animate-spin" />
+            <AsanaSpinner size="lg" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">

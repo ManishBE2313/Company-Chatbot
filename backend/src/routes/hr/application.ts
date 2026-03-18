@@ -5,8 +5,8 @@ import { apiRateLimiter } from "../../middlewares/rateLimiter";
 
 const router = Router();
 
-router.get("/", apiRateLimiter, auth, ApplicationController.listAllApplications);
-router.get("/:applicationId", apiRateLimiter, auth, ApplicationController.getApplicationById);
-router.patch("/:applicationId/status", apiRateLimiter, auth, ApplicationController.updateApplicationStatus);
+router.get("/",  auth, ApplicationController.listAllApplications);
+router.get("/:applicationId", auth, ApplicationController.getApplicationById);
+router.patch("/:applicationId/status", auth, ApplicationController.updateApplicationStatus);
 
 export default router;
