@@ -1,12 +1,14 @@
-import { Transaction } from "sequelize";
+import { Transaction, WhereOptions, fn, col } from "sequelize";
 import { JobAttributes } from "../../models/job";
 import { JobCriteriaAttributes } from "../../models/jobCriteria";
 import { Job, JobCriteria } from "../config/database";
 
+interface JobStatusCountRow {
+  status: JobAttributes["status"];
+  count: string;
+}
+
 export class JobRepository {
-  /**
-   * Creates a new Job entry in the jobs table.
-   */
   public static async createJob(
     payload: Partial<JobAttributes>,
     transaction: Transaction
@@ -14,9 +16,6 @@ export class JobRepository {
     return Job.create(payload, { transaction });
   }
 
-  /**
-   * Creates the linked Job Criteria (Requirements) in the job_criteria table.
-   */
   public static async createJobCriteria(
     payload: Partial<JobCriteriaAttributes>,
     transaction: Transaction
@@ -24,9 +23,6 @@ export class JobRepository {
     return JobCriteria.create(payload, { transaction });
   }
 
-  /**
-   * Fetches a job along with its criteria by Job ID.
-   */
   public static async findJobWithCriteria(
     jobId: string,
     transaction?: Transaction
@@ -41,5 +37,43 @@ export class JobRepository {
       ],
       transaction,
     });
+  }
+
+  public static async findJobById(jobId: string): Promise<any> {
+    return Job.findByPk(jobId);
+  }
+
+  public static async findJobsForHR(status?: JobAttributes["status"]): Promise<any> {
+    const where: WhereOptions<JobAttributes> = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    return Job.findAndCountAll({
+      where,
+      order: [["createdAt", "DESC"]],
+    });
+  }
+
+  public static async countJobsByStatus(): Promise<Record<JobAttributes["status"], number>> {
+    const counts: Record<JobAttributes["status"], number> = {
+      Draft: 0,
+      Open: 0,
+      Paused: 0,
+      Closed: 0,
+    };
+
+    const rows = await Job.findAll({
+      attributes: ["status", [fn("COUNT", col("id")), "count"]],
+      group: ["status"],
+      raw: true,
+    }) as unknown as JobStatusCountRow[];
+
+    for (const row of rows) {
+      counts[row.status] = Number(row.count) || 0;
+    }
+
+    return counts;
   }
 }

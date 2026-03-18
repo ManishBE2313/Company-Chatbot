@@ -20,14 +20,14 @@ export default function LoginPage() {
 
   const handleMicrosoftLogin = () => {
     setIsLoading(true);
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-    window.location.href = `${API_BASE_URL}/api/auth/sso/login`;
+    const BACKEND_AUTH_BASE_URL =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:3000";
+    window.location.href = BACKEND_AUTH_BASE_URL + "/api/auth/sso/login";
   };
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-slate-50 p-4 font-sans">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl sm:rounded-3xl">
-        
         <div className="bg-indigo-600 px-6 py-10 text-center sm:px-10 sm:py-12">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-md ring-1 ring-white/20">
             <Bot size={32} />
@@ -53,7 +53,7 @@ export default function LoginPage() {
           </Button>
 
           <div className="mt-8 text-center text-xs text-slate-400">
-            By logging in, you agree to our corporate IT security policies. 
+            By logging in, you agree to our corporate IT security policies.
             Access is restricted to authorized personnel only.
           </div>
         </div>

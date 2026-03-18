@@ -9,6 +9,7 @@ export interface UserAttributes {
   lastName?: string | null;
   email: string;
   role: UserRole;
+  lastLoginAt?: Date | null;
   isActive?: boolean;
 }
 
@@ -47,6 +48,11 @@ export default function UserModel(
         type: DataTypes.ENUM("user", "admin", "superadmin"),
         allowNull: false,
         defaultValue: "user",
+      },
+      lastLoginAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "last_login_at",
       },
       isActive: {
         type: DataTypes.BOOLEAN,

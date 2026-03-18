@@ -11,7 +11,7 @@ export class WebhookController {
     try {
       const validationRules: QueryValidationRules = {
         applicationId: { type: "uuid", required: true },
-        status: { type: "enum", values: ["Passed", "Rejected", "Interviewing", "Offered"], required: true },
+        status: { type: "enum", values: ["Passed", "Rejected", "Interviewing", "Offered", "ManualReview"], required: true },
         aiScore: { type: "number", required: true, min: 0, max: 100 },
       };
 

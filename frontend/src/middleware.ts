@@ -1,37 +1,38 @@
 // src/middleware.ts
+// Updated to also protect all /hr/* routes.
+// Role-level checks (admin/superadmin) are handled inside each page,
+// middleware only checks that a valid session cookie exists.
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  // 1. Get the path the user is trying to visit
   const path = request.nextUrl.pathname;
 
-  // 2. Define our protected and public routes
+  // All routes that don't need a login
   const isPublicPath = path === "/login";
 
-  // 3. Read the token from the cookies (Matches the cookie name set in FastAPI)
+  // Cookie name must match what FastAPI sets in auth.py
   const token = request.cookies.get("authcookie1")?.value || "";
 
-  // 4. Redirect Logic
-  // If the user is trying to access a protected route (like the chat widget) but has no token
+  // No token on a protected route → send to login
   if (!isPublicPath && !token) {
     return NextResponse.redirect(new URL("/login", request.nextUrl));
   }
 
-  // If the user is ALREADY logged in but tries to visit the login page, send them to the chat
+  // Already logged in but visiting login → send to home
   if (isPublicPath && token) {
     return NextResponse.redirect(new URL("/", request.nextUrl));
   }
 
-  // Otherwise, let them proceed normally
   return NextResponse.next();
 }
 
-// 5. Specify which paths this middleware should run on
 export const config = {
   matcher: [
     "/",
     "/login",
-    // Add any other protected frontend routes here in the future
+    // Protect all /hr pages and any nested routes under it
+    "/hr/:path*",
   ],
 };
