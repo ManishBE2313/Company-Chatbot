@@ -1,6 +1,9 @@
-from typing import TypedDict, Sequence
+from typing import TypedDict, Sequence, List, Dict, Any
 from langgraph.graph import StateGraph, END
 from langchain_core.documents import Document
+
+# NEW IMPORT: The LangGraph Checkpointer to save conversation states across multiple API calls
+from langgraph.checkpoint.memory import MemorySaver
 
 # Import our previously created components
 from ai.llm.client import get_routing_llm
@@ -16,27 +19,36 @@ from ai.agents.domain_agents import (
 class GraphState(TypedDict):
     """
     Defines the state structure that is passed between nodes in the graph.
+    UPDATED: Added 'chat_history' to persist previous interactions for Conversational Memory.
     """
     question: str
     route: str
     context: Sequence[Document]
     answer: str
+    chat_history: List[Dict[str, str]] # Example format: [{"role": "user", "content": "Hi"}, {"role": "ai", "content": "Hello"}]
 
 def supervisor_node(state: GraphState):
     """
-    The first node in the workflow. It uses the DeepSeek-R1 routing model
+    The first node in the workflow. It uses the routing model
     to analyze the user's question and determine which agent should handle it.
     """
-    print("🚦 1. Supervisor Node Started...")
+    print("1. Supervisor Node Started...")
     question = state.get("question")
+    chat_history = state.get("chat_history", [])
+    
     llm = get_routing_llm()
     system_prompt = get_supervisor_prompt()
     
-    # We pass the question to the supervisor to get the strict routing decision
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": question}
-    ]
+    # We pass the system prompt, the historical context, and the new question 
+    # so the supervisor understands follow-up questions (e.g., "Explain that more")
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    # Append past conversation to give the routing model context
+    for msg in chat_history:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+        
+    # Append the current question
+    messages.append({"role": "user", "content": question})
     
     response = llm.invoke(messages)
     route_decision = response.content.strip().lower()
@@ -46,7 +58,7 @@ def supervisor_node(state: GraphState):
     if route_decision not in valid_routes:
         route_decision = "general_agent"
 
-    print(f"✅ 1. Supervisor Node Finished! Route chosen: {route_decision}")    
+    print(f"1. Supervisor Node Finished! Route chosen: {route_decision}")    
     return {"route": route_decision}
 
 def retrieve_node(state: GraphState):
@@ -54,18 +66,22 @@ def retrieve_node(state: GraphState):
     Fetches the relevant document chunks from the Qdrant vector database.
     This runs after the supervisor but before the domain agents.
     """
-    print("🔍 2. Retriever Node Started...")
+    print("2. Retriever Node Started...")
+    
+    # In a conversational RAG setup, the retriever needs the raw question.
+    # We will upgrade this to handle conversational context in a future step if needed.
     question = state.get("question")
     retriever = get_retriever()
     
-    # Retrieve top k documents based on semantic similarity
+    # Retrieve top documents based on semantic similarity
     documents = retriever.invoke(question)
-    print("✅ 2. Retriever Node Finished!")
+    print("2. Retriever Node Finished!")
     return {"context": documents}
 
 def build_graph():
     """
-    Constructs the LangGraph workflow, adding nodes and defining the routing logic.
+    Constructs the LangGraph workflow, adding nodes, defining routing logic,
+    and attaching the memory checkpointer.
     """
     workflow = StateGraph(GraphState)
     
@@ -82,7 +98,6 @@ def build_graph():
     workflow.add_edge("supervisor", "retriever")
     
     # Define the conditional routing logic
-    # The graph will look at the "route" key in the state and move to that specific node
     workflow.add_conditional_edges(
         "retriever",
         lambda state: state["route"],
@@ -100,6 +115,9 @@ def build_graph():
     workflow.add_edge("finance_agent", END)
     workflow.add_edge("general_agent", END)
     
-    # Compile the graph into an executable application
-    app = workflow.compile()
+    # NEW LOGIC: Initialize the memory checkpointer
+    memory = MemorySaver()
+    
+    # Compile the graph and attach the memory system
+    app = workflow.compile(checkpointer=memory)
     return app
