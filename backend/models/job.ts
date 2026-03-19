@@ -8,6 +8,7 @@ export interface JobAttributes {
   location: string;
   status: "Draft" | "Open" | "Paused" | "Closed";
   headcount: number;
+  pipelineConfig?: any[] | null;
 }
 
 export interface JobInstance extends Model<JobAttributes>, JobAttributes {}
@@ -46,6 +47,11 @@ export default function JobModel(
         type: DataTypes.INTEGER,
         defaultValue: 1,
         allowNull: false,
+      },
+      pipelineConfig: {
+        type: DataTypes.JSONB,
+        field: "pipeline_config",
+        allowNull: true,
       },
     },
     {

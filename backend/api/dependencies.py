@@ -7,7 +7,7 @@ from fastapi import Request, HTTPException
 # This must match the secret used in api/auth.py
 JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-enterprise-key")
 NODE_API_BASE_URL = os.getenv("ROOT_URL", "http://127.0.0.1:3000").rstrip("/")
-VALID_ROLES = {"user", "admin", "superadmin"}
+VALID_ROLES = {"user", "admin", "superadmin","interviewer"}
 
 
 async def get_latest_role(email: str, fallback_role: str):

@@ -6,11 +6,11 @@ export interface CandidateAttributes {
   firstName: string;
   lastName: string;
   email: string;
+  isReferral?: boolean;
+  isInternal?: boolean;
 }
 
-export interface CandidateInstance
-  extends Model<CandidateAttributes>,
-    CandidateAttributes {}
+export interface CandidateInstance extends Model<CandidateAttributes>, CandidateAttributes {}
 
 export default function CandidateModel(
   sequelize: Sequelize,
@@ -40,6 +40,16 @@ export default function CandidateModel(
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
+      },
+      isReferral: {
+        type: DataTypes.BOOLEAN,
+        field: "is_referral",
+        defaultValue: false,
+      },
+      isInternal: {
+        type: DataTypes.BOOLEAN,
+        field: "is_internal",
+        defaultValue: false,
       },
     },
     {

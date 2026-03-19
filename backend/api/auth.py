@@ -24,7 +24,7 @@ MS_GRAPH_URL = "https://graph.microsoft.com/v1.0/me"
 JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-enterprise-key")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 NODE_API_BASE_URL = os.getenv("ROOT_URL", "http://127.0.0.1:3000").rstrip("/")
-VALID_ROLES = {"user", "admin", "superadmin"}
+VALID_ROLES = {"user", "admin", "superadmin","interviewer"}
 
 oauth_states = set()
 
