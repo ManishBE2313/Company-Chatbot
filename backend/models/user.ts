@@ -1,7 +1,7 @@
 "use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
 
-export type UserRole = "user" | "admin" | "superadmin";
+export type UserRole = "user" | "admin" | "superadmin"|"interviewer";
 
 export interface UserAttributes {
   id: string;
@@ -45,7 +45,7 @@ export default function UserModel(
         unique: true,
       },
       role: {
-        type: DataTypes.ENUM("user", "admin", "superadmin"),
+        type: DataTypes.ENUM("user", "admin", "superadmin","interviewer"),
         allowNull: false,
         defaultValue: "user",
       },
