@@ -4,6 +4,7 @@ import { validateQueryParams, QueryValidationRules, lengthsOfFields } from "../u
 
 export class JobController {
   public static async createJob(req: any, res: Response, next: NextFunction) {
+     console.log("rechedheree 0")
     try {
       const validationRules: QueryValidationRules = {
         title: { type: "string", required: true, max: lengthsOfFields.title },
@@ -14,8 +15,9 @@ export class JobController {
       };
 
       validateQueryParams(req.body, validationRules);
-
+  console.log("rechedheree 1")
       const result = await JobService.createJobWithCriteria(req.body);
+      console.log("reachedhere 2")
 
       res.status(201).json({
         message: "Job created successfully. AI target generation initiated.",
