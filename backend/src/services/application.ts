@@ -2,6 +2,8 @@ import Errors from "../errors";
 import { JobService } from "./job";
 import { ApplicationRepository } from "../repositories/application";
 import { JobApplicationAttributes } from "../../models/jobApplication";
+import { ScorecardRepository } from "../repositories/ScorecardRepository";
+import { InterviewRepository } from "../repositories/InterviewRepository";
 
 export class ApplicationService {
   public static async listAllApplications(filters: {
@@ -68,5 +70,54 @@ export class ApplicationService {
 
     application.status = status;
     return application;
+  }
+
+  
+
+  public static async createScorecard(payload: any) {
+    const {
+      interviewId,
+      interviewerId,
+      technicalScore,
+      communicationScore,
+      recommendation,
+      notes,
+    } = payload;
+
+    // 1. Validate scores
+    if (technicalScore < 1 || technicalScore > 10) {
+      throw new Error("Invalid technical score");
+    }
+
+    if (communicationScore < 1 || communicationScore > 10) {
+      throw new Error("Invalid communication score");
+    }
+
+    // 2. Fetch interview
+    const interview = await InterviewRepository.findById(interviewId);
+    if (!interview) {
+      throw new Error("Interview not found");
+    }
+
+    // 3. Authorization
+    if (interview.interviewerId.toString() !== interviewerId) {
+      throw new Error("Unauthorized interviewer");
+    }
+
+    // 4. Check duplicate
+    const existing = await ScorecardRepository.findByInterviewId(interviewId);
+    if (existing) {
+      throw new Error("Scorecard already submitted");
+    }
+
+    // 5. Create
+    return await ScorecardRepository.create({
+      interviewId,
+      interviewerId,
+      technicalScore,
+      communicationScore,
+      recommendation,
+      notes,
+    });
   }
 }
