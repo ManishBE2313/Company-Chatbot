@@ -42,18 +42,22 @@ export class ApplicationService {
 
     return {
       total:
-        counts.Pending +
-        counts.Passed +
-        counts.Rejected +
-        counts.Interviewing +
-        counts.Offered +
-        counts.ManualReview,
-      pending: counts.Pending,
-      passed: counts.Passed,
-      rejected: counts.Rejected,
-      interviewing: counts.Interviewing,
-      offered: counts.Offered,
-      manualReview: counts.ManualReview,
+        counts.PENDING +
+        counts.SCREENED +
+        counts.SCHEDULING +
+        counts.SCHEDULED +
+        counts.EVALUATING +
+        counts.OFFERED +
+        counts.REJECTED +
+        counts.WITHDRAWN,
+      pending: counts.PENDING,
+      screened: counts.SCREENED,
+      scheduling: counts.SCHEDULING,
+      scheduled: counts.SCHEDULED,
+      evaluating: counts.EVALUATING,
+      offered: counts.OFFERED,
+      rejected: counts.REJECTED,
+      withdrawn: counts.WITHDRAWN,
     };
   }
 
@@ -72,8 +76,6 @@ export class ApplicationService {
     return application;
   }
 
-  
-
   public static async createScorecard(payload: any) {
     const {
       interviewId,
@@ -84,7 +86,6 @@ export class ApplicationService {
       notes,
     } = payload;
 
-    // 1. Validate scores
     if (technicalScore < 1 || technicalScore > 10) {
       throw new Error("Invalid technical score");
     }
@@ -93,24 +94,20 @@ export class ApplicationService {
       throw new Error("Invalid communication score");
     }
 
-    // 2. Fetch interview
     const interview = await InterviewRepository.findById(interviewId);
     if (!interview) {
       throw new Error("Interview not found");
     }
 
-    // 3. Authorization
     if (interview.interviewerId.toString() !== interviewerId) {
       throw new Error("Unauthorized interviewer");
     }
 
-    // 4. Check duplicate
     const existing = await ScorecardRepository.findByInterviewId(interviewId);
     if (existing) {
       throw new Error("Scorecard already submitted");
     }
 
-    // 5. Create
     return await ScorecardRepository.create({
       interviewId,
       interviewerId,

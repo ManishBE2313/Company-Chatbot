@@ -45,12 +45,14 @@ export class ApplicationRepository {
 
   public static async countApplicationsByStatus(jobId: string): Promise<Record<JobApplicationAttributes["status"], number>> {
     const counts: Record<JobApplicationAttributes["status"], number> = {
-      Pending: 0,
-      Passed: 0,
-      Rejected: 0,
-      Interviewing: 0,
-      Offered: 0,
-      ManualReview: 0,
+      PENDING: 0,
+      SCREENED: 0,
+      SCHEDULING: 0,
+      SCHEDULED: 0,
+      EVALUATING: 0,
+      OFFERED: 0,
+      REJECTED: 0,
+      WITHDRAWN: 0,
     };
 
     const rows = await JobApplication.findAll({
