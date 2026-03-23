@@ -15,7 +15,7 @@ export const runtimeConfig = {
   qdrantPort: toNumber(process.env.QDRANT_PORT, 6333),
   redisPort: toNumber(process.env.REDIS_PORT, 6379),
   dbHost: process.env.DB_HOST || "localhost",
-  dbPort: toNumber(process.env.DB_PORT, 5432),
+  dbPort: toNumber(process.env.DB_PORT, 3306),
   dbName:
     process.env.DB_NAME ||
     process.env.DB_NAME_DEV ||
@@ -25,7 +25,7 @@ export const runtimeConfig = {
     process.env.DB_USER ||
     process.env.DB_USER_DEV ||
     process.env.POSTGRES_USER ||
-    "postgres",
+    "root",
   dbPassword:
     process.env.DB_PASSWORD ||
     process.env.DB_COMPANY_PASSWORD_DEV ||

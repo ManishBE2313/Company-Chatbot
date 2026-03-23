@@ -19,7 +19,7 @@ export const sequelize = new Sequelize(
   {
     host: runtimeConfig.dbHost,
     port: runtimeConfig.dbPort,
-    dialect: "postgres",
+    dialect: "mysql",
     logging: runtimeConfig.dbLogging ? console.log : false,
     dialectOptions: isProduction && runtimeConfig.dbSsl
       ? {
