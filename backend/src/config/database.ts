@@ -9,6 +9,12 @@ import InterviewModel from "../../models/interview";
 import ScorecardModel from "../../models/scorecard";
 import PipelineEventModel from "../../models/pipelineEvent";
 import { runtimeConfig } from "./runtime";
+import EmployeeModel from "../../models/employee";
+import EmployeeContactModel from "../../models/employeeContact";
+import EmployeePersonalModel from "../../models/employeePersonal";
+import EmployeeWorkModel from "../../models/employeeWork";
+import EmployeeEmergencyModel from "../../models/employeeEmergency";
+import EmployeeEducationModel from "../../models/employeeEducation";
 
 const isProduction = runtimeConfig.nodeEnv.toLowerCase() === "production";
 
@@ -42,6 +48,13 @@ export const Interview = InterviewModel(sequelize);
 export const Scorecard = ScorecardModel(sequelize);
 export const PipelineEvent = PipelineEventModel(sequelize);
 
+export const Employee = EmployeeModel(sequelize);
+export const EmployeeContact = EmployeeContactModel(sequelize);
+export const EmployeePersonal = EmployeePersonalModel(sequelize);
+export const EmployeeWork = EmployeeWorkModel(sequelize);
+export const EmployeeEmergency = EmployeeEmergencyModel(sequelize);
+export const EmployeeEducation = EmployeeEducationModel(sequelize);
+
 // 1. Define the models object FIRST
 const models = {
   candidate: Candidate,
@@ -53,18 +66,21 @@ const models = {
   interview: Interview,
   scorecard: Scorecard,
   pipelineEvent: PipelineEvent,
+  employee: Employee,
+  employeeContact: EmployeeContact,
+  employeePersonal: EmployeePersonal,
+  employeeWork: EmployeeWork,
+  employeeEmergency: EmployeeEmergency,
+  employeeEducation: EmployeeEducation,
 };
 
 // 2. Pass the ENTIRE `models` object to every associate function
-if (Candidate.associate) Candidate.associate(models);
-if (Job.associate) Job.associate(models);
-if (JobCriteria.associate) JobCriteria.associate(models);
-if (JobApplication.associate) JobApplication.associate(models);
-if (User.associate) User.associate(models);
-if (InterviewSlot.associate) InterviewSlot.associate(models);
-if (Interview.associate) Interview.associate(models);
-if (Scorecard.associate) Scorecard.associate(models);
-if (PipelineEvent.associate) PipelineEvent.associate(models);
+
+Object.values(models).forEach((model: any) => {
+  if (model.associate) {
+    model.associate(models);
+  }
+});
 
 export const getTransaction = () => sequelize.transaction();
 
