@@ -25,6 +25,7 @@ import {
   createInterviewSlot,
   deleteInterviewSlot,
   getMyInterviews,
+  getScheduledInterviews,
   submitScorecard,
   updateJobPipeline,
 } from "@/services/hrApiClient";
@@ -302,15 +303,36 @@ export function useMyInterviews(userEmail?: string | null) {
   return { interviews, isLoading, error, refetch: fetch, setInterviews };
 }
 
+export function useScheduledInterviews(userEmail?: string | null) {
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch = useCallback(() => {
+    if (!userEmail) return;
+    setIsLoading(true);
+    getScheduledInterviews(userEmail)
+      .then(setInterviews)
+      .catch((e) => setError(e.message))
+      .finally(() => setIsLoading(false));
+  }, [userEmail]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { interviews, isLoading, error, refetch: fetch, setInterviews };
+}
+
 export function useSubmitScorecard(onSuccess?: () => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = useCallback(async (payload: CreateScorecardPayload) => {
+  const submit = useCallback(async (payload: CreateScorecardPayload, userEmail?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await submitScorecard(payload);
+      const response = await submitScorecard(payload, userEmail);
       onSuccess?.();
       return response;
     } catch (e: any) {

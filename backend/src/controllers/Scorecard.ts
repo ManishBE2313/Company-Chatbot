@@ -22,14 +22,18 @@ export class ScorecardController {
 
       validateQueryParams(req.body, validationRules);
 
-      const scorecard = await ApplicationService.createScorecard(req.body);
+      const actingUserEmail = typeof req.headers["x-user-email"] === "string"
+        ? req.headers["x-user-email"]
+        : null;
+
+      const scorecard = await ApplicationService.createScorecard(req.body, actingUserEmail);
       const interview = await InterviewRepository.findById(req.body.interviewId);
 
       if (interview) {
         await PipelineService.transitionState(
           interview.applicationId,
           "EVALUATING",
-          req.body.interviewerId,
+          scorecard.interviewerId,
           `Scorecard Submitted: ${req.body.recommendation}`
         );
       }
