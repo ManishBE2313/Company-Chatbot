@@ -2,7 +2,16 @@ import { Response, NextFunction } from "express";
 import { ApplicationService } from "../services/application";
 import { validateQueryParams, QueryValidationRules } from "../utils/validation";
 
-const APPLICATION_STATUSES = ["Pending", "Passed", "Rejected", "Interviewing", "Offered", "ManualReview"];
+const APPLICATION_STATUSES = [
+  "PENDING",
+  "SCREENED",
+  "SCHEDULING",
+  "SCHEDULED",
+  "EVALUATING",
+  "OFFERED",
+  "REJECTED",
+  "WITHDRAWN",
+];
 
 export class ApplicationController {
   public static async listAllApplications(req: any, res: Response, next: NextFunction) {
@@ -111,32 +120,31 @@ export class ApplicationController {
     }
   }
 
- public static async createScorecard(req: any, res: Response, next: NextFunction) {
-  try {
-    const validationRules: QueryValidationRules = {
-      interviewId: { type: "uuid", required: true },
-      interviewerId: { type: "uuid", required: true },
-      technicalScore: { type: "number", required: true },
-      communicationScore: { type: "number", required: true },
-      recommendation: {
-        type: "enum",
-        required: true,
-        values: ["STRONG_HIRE", "HIRE", "HOLD", "NO_HIRE"],
-      },
-      notes: { type: "string", required: false },
-    };
+  public static async createScorecard(req: any, res: Response, next: NextFunction) {
+    try {
+      const validationRules: QueryValidationRules = {
+        interviewId: { type: "uuid", required: true },
+        interviewerId: { type: "uuid", required: true },
+        technicalScore: { type: "number", required: true },
+        communicationScore: { type: "number", required: true },
+        recommendation: {
+          type: "enum",
+          required: true,
+          values: ["STRONG_HIRE", "HIRE", "HOLD", "NO_HIRE"],
+        },
+        notes: { type: "string", required: false },
+      };
 
-    validateQueryParams(req.body, validationRules);
+      validateQueryParams(req.body, validationRules);
 
-    const scorecard = await ApplicationService.createScorecard(req.body);
+      const scorecard = await ApplicationService.createScorecard(req.body);
 
-    res.status(201).json({
-      message: "Scorecard submitted successfully",
-      data: scorecard,
-    });
-
-  } catch (error) {
-    next(error);
+      res.status(201).json({
+        message: "Scorecard submitted successfully",
+        data: scorecard,
+      });
+    } catch (error) {
+      next(error);
+    }
   }
-}
 }

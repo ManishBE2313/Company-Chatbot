@@ -52,7 +52,7 @@ export class CandidateService {
           candidateId: candidate.id,
           jobId: payload.jobId,
           resumeUrl: payload.resumeUrl,
-          status: "Pending",
+          status: "PENDING",
         },
         transaction
       );

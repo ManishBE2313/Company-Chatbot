@@ -1,5 +1,5 @@
 import { fn, col } from "sequelize";
-import { Candidate, Job, JobApplication } from "../config/database";
+import { Candidate, Interview, InterviewSlot, Job, JobApplication, Scorecard, User } from "../config/database";
 import { JobApplicationAttributes } from "../../models/jobApplication";
 
 interface ApplicationStatusCountRow {
@@ -39,18 +39,34 @@ export class ApplicationRepository {
       include: [
         { model: Candidate, as: "candidate" },
         { model: Job, as: "job" },
+        {
+          model: Interview,
+          as: "interviews",
+          include: [
+            { model: InterviewSlot, as: "slot" },
+            {
+              model: User,
+              as: "interviewer",
+              attributes: ["id", "firstName", "lastName", "email", "role"],
+            },
+            { model: Scorecard, as: "scorecard" },
+          ],
+          order: [["createdAt", "DESC"]],
+        },
       ],
     });
   }
 
   public static async countApplicationsByStatus(jobId: string): Promise<Record<JobApplicationAttributes["status"], number>> {
     const counts: Record<JobApplicationAttributes["status"], number> = {
-      Pending: 0,
-      Passed: 0,
-      Rejected: 0,
-      Interviewing: 0,
-      Offered: 0,
-      ManualReview: 0,
+      PENDING: 0,
+      SCREENED: 0,
+      SCHEDULING: 0,
+      SCHEDULED: 0,
+      EVALUATING: 0,
+      OFFERED: 0,
+      REJECTED: 0,
+      WITHDRAWN: 0,
     };
 
     const rows = await JobApplication.findAll({

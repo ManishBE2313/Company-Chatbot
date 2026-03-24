@@ -9,6 +9,8 @@ import jobRouter from "./routes/job";
 import Errors from "./errors";
 import scorecardRouter from "./routes/scorecard";
 import notificationRouter from "./routes/notification";
+import interviewSlotRouter from "./routes/interviewSlot";
+import interviewRouter from "./routes/interview";
 
 const app = express();
 
@@ -28,6 +30,8 @@ app.use("/api/webhooks", webhookRouter);
 app.use("/api/jobs", jobRouter);
 app.use("/api/scorecard", scorecardRouter);
 app.use("/api/notifications", notificationRouter);
+app.use("/api/slots", interviewSlotRouter);
+app.use("/api/interviews", interviewRouter);
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(new Errors.BadRequestError("Route not found: " + req.method + " " + req.originalUrl));
