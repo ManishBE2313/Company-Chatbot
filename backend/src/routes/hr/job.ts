@@ -8,6 +8,7 @@ const router = Router();
 
 router.get("/", apiRateLimiter, auth, JobController.listJobs);
 router.get("/:jobId", apiRateLimiter, auth, JobController.getJobById);
+router.patch("/:jobId/pipeline", apiRateLimiter, auth, JobController.updatePipelineConfig);
 router.get("/:jobId/applications", apiRateLimiter, auth, ApplicationController.listApplicationsByJob);
 router.get("/:jobId/stats", apiRateLimiter, auth, ApplicationController.getPipelineStats);
 

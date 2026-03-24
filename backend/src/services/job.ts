@@ -12,6 +12,13 @@ export interface CreateJobPayload {
   requirements: Record<string, unknown>;
 }
 
+export interface PipelineStagePayload {
+  id?: string;
+  name: string;
+  interviewerIds?: string[];
+  interviewerEmails?: string[];
+}
+
 export class JobService {
   public static async createJobWithCriteria(payload: CreateJobPayload): Promise<any> {
     let transaction: Transaction | undefined;
@@ -100,5 +107,26 @@ export class JobService {
     }
 
     return job;
+  }
+
+  public static async updatePipelineConfig(jobId: string, pipelineConfig: PipelineStagePayload[]) {
+    await this.getJobForHR(jobId);
+
+    const sanitizedPipelineConfig = pipelineConfig.map((stage, index) => ({
+      id: stage.id || `round-${index + 1}`,
+      name: stage.name.trim(),
+      interviewerIds: Array.isArray(stage.interviewerIds) ? stage.interviewerIds : [],
+      interviewerEmails: Array.isArray(stage.interviewerEmails) ? stage.interviewerEmails : [],
+    }));
+
+    const affectedCount = await JobRepository.updateJob(jobId, {
+      pipelineConfig: sanitizedPipelineConfig,
+    });
+
+    if (!affectedCount) {
+      throw new Errors.SystemError("Job pipeline configuration could not be updated.");
+    }
+
+    return this.getJobForHR(jobId);
   }
 }

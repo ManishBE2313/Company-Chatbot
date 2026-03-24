@@ -111,7 +111,7 @@ export default function Home() {
       .catch(() => setUserRole("employee"));
   }, []);
 
-  const isAdmin = userRole === "admin" || userRole === "superadmin";
+  const canAccessHRPortal = userRole === "interviewer" || userRole === "admin" || userRole === "superadmin";
 
   const activePolicy =
     policiesData.find((p) => p.id === activePolicyId) || policiesData[0];
@@ -191,8 +191,8 @@ export default function Home() {
             User
           </div>
 
-          {/* HR Portal button — only shown to admin / superadmin */}
-          {isAdmin && (
+          {/* HR Portal button — shown to interviewer / admin / superadmin */}
+          {canAccessHRPortal && (
             <button
               onClick={() => router.push("/hr")}
               className="flex items-center gap-3 px-2 py-2 w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors text-[14px] font-medium mb-1"
