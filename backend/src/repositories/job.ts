@@ -43,6 +43,14 @@ export class JobRepository {
     return Job.findByPk(jobId);
   }
 
+  public static async updateJob(jobId: string, updateData: Partial<JobAttributes>) {
+    const [affectedCount] = await Job.update(updateData, {
+      where: { id: jobId },
+    });
+
+    return affectedCount;
+  }
+
   public static async findJobsForHR(status?: JobAttributes["status"]): Promise<any> {
     const where: WhereOptions<JobAttributes> = {};
 

@@ -7,6 +7,11 @@ import {
   UploadCVPayload,
   PipelineStats,
   HRUser,
+  CreateInterviewSlotPayload,
+  Interview,
+  InterviewSlot,
+  CreateScorecardPayload,
+  PipelineStageConfig,
 } from "@/types/hr";
 
 const fastApiClient = axios.create({
@@ -35,6 +40,14 @@ function getErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function withUserEmail(email: string) {
+  return {
+    headers: {
+      "x-user-email": email,
+    },
+  };
 }
 
 export async function getHRCurrentUser(): Promise<HRUser> {
@@ -104,9 +117,7 @@ export async function getApplicationsByJob(
   }
 }
 
-export async function getApplicationById(
-  applicationId: string
-): Promise<Application> {
+export async function getApplicationById(applicationId: string): Promise<Application> {
   try {
     const response = await nextApiClient.get<{ data: Application }>(
       `/api/hr/applications/${applicationId}`
@@ -151,5 +162,80 @@ export async function updateApplicationStatus(
     });
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to update application status."));
+  }
+}
+
+export async function getMyInterviewSlots(userEmail: string): Promise<InterviewSlot[]> {
+  try {
+    const response = await nextApiClient.get<{ data: InterviewSlot[] }>(
+      "/api/slots/me",
+      withUserEmail(userEmail)
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch interview slots."));
+  }
+}
+
+export async function createInterviewSlot(
+  userEmail: string,
+  payload: CreateInterviewSlotPayload
+): Promise<InterviewSlot> {
+  try {
+    const response = await nextApiClient.post<{ data: InterviewSlot }>(
+      "/api/slots",
+      payload,
+      withUserEmail(userEmail)
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to create interview slot."));
+  }
+}
+
+export async function deleteInterviewSlot(userEmail: string, slotId: string): Promise<void> {
+  try {
+    await nextApiClient.delete(`/api/slots/${slotId}`, withUserEmail(userEmail));
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to delete interview slot."));
+  }
+}
+
+export async function getMyInterviews(userEmail: string): Promise<Interview[]> {
+  try {
+    const response = await nextApiClient.get<{ data: Interview[] }>(
+      "/api/interviews/me",
+      withUserEmail(userEmail)
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch interviews."));
+  }
+}
+
+export async function submitScorecard(payload: CreateScorecardPayload) {
+  try {
+    const response = await nextApiClient.post<{ data: unknown }>(
+      "/api/scorecard/create-scorecard",
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to submit scorecard."));
+  }
+}
+
+export async function updateJobPipeline(
+  jobId: string,
+  pipelineConfig: PipelineStageConfig[]
+): Promise<Job> {
+  try {
+    const response = await nextApiClient.patch<{ data: Job }>(
+      `/api/hr/jobs/${jobId}/pipeline`,
+      { pipelineConfig }
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update pipeline config."));
   }
 }

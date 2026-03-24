@@ -33,4 +33,8 @@ export class UserRepository {
     const user = await User.findOne({ where: { email: email.trim() } });
     return (user?.role as UserRole | undefined) ?? "user";
   }
+
+  public static async findByEmail(email: string) {
+    return User.findOne({ where: { email: email.trim() } });
+  }
 }

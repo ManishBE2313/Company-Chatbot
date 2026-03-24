@@ -1,5 +1,5 @@
 import { fn, col } from "sequelize";
-import { Candidate, Job, JobApplication } from "../config/database";
+import { Candidate, Interview, InterviewSlot, Job, JobApplication, Scorecard, User } from "../config/database";
 import { JobApplicationAttributes } from "../../models/jobApplication";
 
 interface ApplicationStatusCountRow {
@@ -39,6 +39,20 @@ export class ApplicationRepository {
       include: [
         { model: Candidate, as: "candidate" },
         { model: Job, as: "job" },
+        {
+          model: Interview,
+          as: "interviews",
+          include: [
+            { model: InterviewSlot, as: "slot" },
+            {
+              model: User,
+              as: "interviewer",
+              attributes: ["id", "firstName", "lastName", "email", "role"],
+            },
+            { model: Scorecard, as: "scorecard" },
+          ],
+          order: [["createdAt", "DESC"]],
+        },
       ],
     });
   }

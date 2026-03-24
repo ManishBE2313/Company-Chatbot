@@ -11,6 +11,7 @@ export async function proxyToBackend(
 ) {
   try {
     const contentType = request.headers.get("content-type");
+    const userEmail = request.headers.get("x-user-email");
     const body = method === "GET" ? undefined : await request.text();
 
     const response = await axios.request({
@@ -19,6 +20,7 @@ export async function proxyToBackend(
       data: body,
       headers: {
         ...(contentType ? { "Content-Type": contentType } : {}),
+        ...(userEmail ? { "x-user-email": userEmail } : {}),
       },
       validateStatus: () => true,
     });
