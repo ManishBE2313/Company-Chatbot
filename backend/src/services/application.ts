@@ -4,6 +4,7 @@ import { ApplicationRepository } from "../repositories/application";
 import { JobApplicationAttributes } from "../../models/jobApplication";
 import { ScorecardRepository } from "../repositories/ScorecardRepository";
 import { InterviewRepository } from "../repositories/InterviewRepository";
+import { UserRepository } from "../repositories/user";
 
 export class ApplicationService {
   public static async listAllApplications(filters: {
@@ -76,7 +77,7 @@ export class ApplicationService {
     return application;
   }
 
-  public static async createScorecard(payload: any) {
+  public static async createScorecard(payload: any, actingUserEmail?: string | null) {
     const {
       interviewId,
       interviewerId,
@@ -99,7 +100,12 @@ export class ApplicationService {
       throw new Error("Interview not found");
     }
 
-    if (interview.interviewerId.toString() !== interviewerId) {
+    const actingUser = actingUserEmail ? await UserRepository.findByEmail(actingUserEmail) : null;
+    const actingUserRole = actingUser?.role ?? "user";
+    const isPrivilegedReviewer = actingUserRole === "admin" || actingUserRole === "superadmin";
+    const effectiveInterviewerId = actingUser?.id || interviewerId;
+
+    if (!isPrivilegedReviewer && interview.interviewerId.toString() !== effectiveInterviewerId) {
       throw new Error("Unauthorized interviewer");
     }
 
@@ -110,7 +116,7 @@ export class ApplicationService {
 
     return await ScorecardRepository.create({
       interviewId,
-      interviewerId,
+      interviewerId: effectiveInterviewerId,
       technicalScore,
       communicationScore,
       recommendation,

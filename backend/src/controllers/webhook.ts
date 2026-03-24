@@ -15,6 +15,42 @@ const AI_TO_PIPELINE_STATUS = {
   ManualReview: "SCREENED",
 } as const;
 
+function requiresManualIntervention(
+  status: string,
+  aiTags: unknown,
+  aiReasoning: unknown
+) {
+  if (status === "ManualReview") {
+    return true;
+  }
+
+  const normalizedTags = Array.isArray(aiTags)
+    ? aiTags.map((tag) => String(tag).toLowerCase())
+    : [];
+
+  if (
+    normalizedTags.some((tag) =>
+      tag.includes("manual-review") ||
+      tag.includes("manual-review-required") ||
+      tag.includes("high-bias-divergence")
+    )
+  ) {
+    return true;
+  }
+
+  if (typeof aiReasoning === "string") {
+    const normalizedReasoning = aiReasoning.toLowerCase();
+    if (
+      normalizedReasoning.includes("manual review") ||
+      normalizedReasoning.includes("human review legally advised")
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export class WebhookController {
   public static async processAiResult(req: any, res: Response, next: NextFunction) {
     let transaction: Transaction | undefined;
@@ -32,6 +68,7 @@ export class WebhookController {
       const { applicationId, status, aiScore, aiTags, aiReasoning, isReferral, isInternal } = req.body;
       const priorityScore = calculatePriority(aiScore, isReferral, isInternal);
       const mappedStatus = AI_TO_PIPELINE_STATUS[status as keyof typeof AI_TO_PIPELINE_STATUS];
+      const shouldHoldForManualReview = requiresManualIntervention(status, aiTags, aiReasoning);
 
       if (aiTags !== undefined && !Array.isArray(aiTags) && (typeof aiTags !== "object" || aiTags === null)) {
         throw new Errors.BadRequestError("aiTags must be an array or object when provided.");
@@ -66,7 +103,7 @@ export class WebhookController {
 
       await transaction.commit();
 
-      if (status === "Passed" || status === "Interviewing") {
+      if ((status === "Passed" || status === "Interviewing") && !shouldHoldForManualReview) {
         await PipelineService.transitionState(
           applicationId,
           "SCHEDULING",
@@ -75,7 +112,11 @@ export class WebhookController {
         );
       }
 
-      res.status(200).json({ message: "Job application AI evaluation updated successfully." });
+      res.status(200).json({
+        message: shouldHoldForManualReview
+          ? "Job application updated and held for manual HR intervention before scheduling."
+          : "Job application AI evaluation updated successfully.",
+      });
     } catch (err) {
       if (transaction) {
         await transaction.rollback();

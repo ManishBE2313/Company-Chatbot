@@ -213,11 +213,24 @@ export async function getMyInterviews(userEmail: string): Promise<Interview[]> {
   }
 }
 
-export async function submitScorecard(payload: CreateScorecardPayload) {
+export async function getScheduledInterviews(userEmail: string): Promise<Interview[]> {
+  try {
+    const response = await nextApiClient.get<{ data: Interview[] }>(
+      "/api/interviews/scheduled",
+      withUserEmail(userEmail)
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch scheduled interviews."));
+  }
+}
+
+export async function submitScorecard(payload: CreateScorecardPayload, userEmail?: string) {
   try {
     const response = await nextApiClient.post<{ data: unknown }>(
       "/api/scorecard/create-scorecard",
-      payload
+      payload,
+      userEmail ? withUserEmail(userEmail) : undefined
     );
     return response.data;
   } catch (error) {
