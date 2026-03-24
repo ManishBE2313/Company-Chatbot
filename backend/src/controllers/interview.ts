@@ -19,6 +19,32 @@ async function resolveUser(req: any) {
   return user;
 }
 
+function interviewInclude() {
+  return [
+    {
+      model: InterviewSlot,
+      as: "slot",
+    },
+    {
+      model: Scorecard,
+      as: "scorecard",
+    },
+    {
+      model: User,
+      as: "interviewer",
+      attributes: ["id", "firstName", "lastName", "email", "role"],
+    },
+    {
+      model: JobApplication,
+      as: "application",
+      include: [
+        { model: Candidate, as: "candidate" },
+        { model: Job, as: "job" },
+      ],
+    },
+  ];
+}
+
 export class InterviewController {
   public static async getMyInterviews(req: any, res: Response, next: NextFunction) {
     try {
@@ -26,29 +52,28 @@ export class InterviewController {
 
       const interviews = await Interview.findAll({
         where: { interviewerId: user.id },
-        include: [
-          {
-            model: InterviewSlot,
-            as: "slot",
-          },
-          {
-            model: Scorecard,
-            as: "scorecard",
-          },
-          {
-            model: User,
-            as: "interviewer",
-            attributes: ["id", "firstName", "lastName", "email", "role"],
-          },
-          {
-            model: JobApplication,
-            as: "application",
-            include: [
-              { model: Candidate, as: "candidate" },
-              { model: Job, as: "job" },
-            ],
-          },
-        ],
+        include: interviewInclude(),
+        order: [["createdAt", "DESC"]],
+      });
+
+      res.status(200).json({ data: interviews });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async getScheduledInterviewsBoard(req: any, res: Response, next: NextFunction) {
+    try {
+      const user = await resolveUser(req);
+      const isPrivileged = user.role === "admin" || user.role === "superadmin";
+
+      if (!isPrivileged) {
+        throw new Errors.BadRequestError("Only admin and superadmin can view the central interview board.");
+      }
+
+      const interviews = await Interview.findAll({
+        where: { status: "SCHEDULED" },
+        include: interviewInclude(),
         order: [["createdAt", "DESC"]],
       });
 
