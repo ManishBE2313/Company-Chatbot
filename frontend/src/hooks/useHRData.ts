@@ -32,6 +32,13 @@ import {
 import { fetchCurrentHRUser, fetchHRJobs } from "@/lib/redux/features/hr/HRSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/redux";
 
+export interface InterviewerOption {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
 export function useHRCurrentUser() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.hr.currentUser);
@@ -366,4 +373,30 @@ export function useUpdateJobPipeline(onSuccess?: (job: Job) => void) {
   }, [onSuccess]);
 
   return { submit, isLoading, error };
+}
+export function useInterviewers() {
+  const [interviewers, setInterviewers] = useState<InterviewerOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    // FIX: Change this to match the Next.js API route, NOT the backend route!
+    fetch("/api/hr/interviewers") 
+      .then((res) => {
+        console.log("Response Status:", res.status); 
+        return res.json();
+      })
+      .then((response) => {
+        console.log("Raw Backend Data:", response); 
+        setInterviewers(response.data || []);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch interviewers", err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  return { interviewers, isLoading };
 }

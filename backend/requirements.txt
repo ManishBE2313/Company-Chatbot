@@ -23,3 +23,8 @@ docling
 # Add these to your existing requirements.txt
 PyMuPDF==1.23.21      # For fast, reliable PDF text extraction (imported as 'fitz')
 httpx==0.27.0         # For async HTTP requests (downloading CVs and sending webhooks)
+PyPDF2                # For in-memory PDF extraction (used in batch_intake.py)
+
+# Microsoft Graph API / SharePoint
+# msal                  # Required for Entra ID authentication
+requests              # Required for standard Graph API requests

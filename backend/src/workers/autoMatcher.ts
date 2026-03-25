@@ -5,6 +5,7 @@ import {
   InterviewSlot,
   Job,
   JobApplication,
+  User, 
   getTransaction,
 } from "../config/database";
 import { PipelineService } from "../services/pipeline";
@@ -32,12 +33,19 @@ const getStageName = (application: any) => {
   return firstStage?.name || firstStage?.roundName || firstStage?.title || "Interview Round";
 };
 
-async function findAvailableSlot(transaction: Transaction) {
+async function findAvailableSlot(transaction: Transaction, allowedInterviewerIds: string[]) {
+  if (!allowedInterviewerIds || allowedInterviewerIds.length === 0) {
+    return null;
+  }
+
   return InterviewSlot.findOne({
     where: {
       isBooked: false,
       startTime: {
         [Op.gte]: new Date(),
+      },
+      interviewerId: {
+        [Op.in]: allowedInterviewerIds,
       },
     },
     order: [["startTime", "ASC"]],
@@ -85,22 +93,58 @@ async function tryScheduleCandidate(application: any) {
       return true;
     }
 
-    const availableSlot = await findAvailableSlot(transaction);
+    const currentStageName = getStageName(freshApplication);
+    
+    const pipelineConfig = Array.isArray(freshApplication.job?.pipelineConfig)
+      ? freshApplication.job.pipelineConfig
+      : [];
+      
+    let currentStageConfig = pipelineConfig.find((stage: any) => 
+      stage?.name === currentStageName || stage?.roundName === currentStageName || stage?.title === currentStageName
+    );
+
+    // NEW: Fallback to the first stage if the candidate is stuck on a generic name
+    if (!currentStageConfig && pipelineConfig.length > 0) {
+      currentStageConfig = pipelineConfig[0];
+    }
+    
+    let allowedInterviewerIds = currentStageConfig?.interviewerIds || [];
+    const allowedInterviewerEmails = currentStageConfig?.interviewerEmails || [];
+
+    // NEW: If IDs are missing but we have emails, look up the IDs in the database
+    if (allowedInterviewerIds.length === 0 && allowedInterviewerEmails.length > 0) {
+      const users = await User.findAll({
+        where: { email: { [Op.in]: allowedInterviewerEmails } },
+        attributes: ["id"],
+        transaction
+      }) as any;
+      allowedInterviewerIds = users.map((u: any) => u.id);
+    }
+
+    console.log("\n--- AUTO MATCHER DEBUG ---");
+    console.log("Candidate App ID:", freshApplication.id);
+    console.log("Target Stage:", currentStageConfig?.name || "None");
+    console.log("Resolved IDs Array:", allowedInterviewerIds);
+    console.log("--------------------------\n");
+
+    const availableSlot = await findAvailableSlot(transaction, allowedInterviewerIds);
+    
     if (!availableSlot) {
       await transaction.rollback();
-      return false;
+      return false; 
     }
 
     await availableSlot.update({ isBooked: true }, { transaction });
 
-    const currentStageName = getStageName(freshApplication);
+    // Use the exact stage name from the config
+    const finalRoundName = currentStageConfig?.name || currentStageName;
 
     await Interview.create(
       {
         applicationId: freshApplication.id,
         interviewerId: availableSlot.interviewerId,
         slotId: availableSlot.id,
-        roundName: currentStageName,
+        roundName: finalRoundName,
         status: "SCHEDULED",
       },
       { transaction }
@@ -112,7 +156,7 @@ async function tryScheduleCandidate(application: any) {
       freshApplication.id,
       "SCHEDULED",
       null,
-      `Auto-Scheduled with Interviewer ${availableSlot.interviewerId} for ${currentStageName}`
+      `Auto-Scheduled with Interviewer ${availableSlot.interviewerId} for ${finalRoundName}`
     );
 
     const candidateFirstName = freshApplication.candidate?.firstName || "Candidate";

@@ -11,6 +11,7 @@ import scorecardRouter from "./routes/scorecard";
 import notificationRouter from "./routes/notification";
 import interviewSlotRouter from "./routes/interviewSlot";
 import interviewRouter from "./routes/interview";
+import batchIngestRouter from "./routes/hr/batchIngest";
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use("/api/scorecard", scorecardRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/slots", interviewSlotRouter);
 app.use("/api/interviews", interviewRouter);
+app.use("/api/hr/jobs/:jobId", batchIngestRouter);
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(new Errors.BadRequestError("Route not found: " + req.method + " " + req.originalUrl));
