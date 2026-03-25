@@ -99,13 +99,36 @@ async function tryScheduleCandidate(application: any) {
       ? freshApplication.job.pipelineConfig
       : [];
       
-    let currentStageConfig = pipelineConfig.find((stage: any) => 
+    // Find the index of the current stage
+    const currentStageIndex = pipelineConfig.findIndex((stage: any) => 
       stage?.name === currentStageName || stage?.roundName === currentStageName || stage?.title === currentStageName
     );
 
-    // NEW: Fallback to the first stage if the candidate is stuck on a generic name
-    if (!currentStageConfig && pipelineConfig.length > 0) {
-      currentStageConfig = pipelineConfig[0];
+    let currentStageConfig = currentStageIndex >= 0 ? pipelineConfig[currentStageIndex] : null;
+
+    // --- SMART LOGIC: Skip stages without interviewers ---
+    const hasInterviewers = (stage: any) => 
+      (Array.isArray(stage?.interviewerIds) && stage.interviewerIds.length > 0) || 
+      (Array.isArray(stage?.interviewerEmails) && stage.interviewerEmails.length > 0);
+
+    // If the current stage is empty or not found, look forward for the first valid stage
+    if (!currentStageConfig || !hasInterviewers(currentStageConfig)) {
+      const startIndex = Math.max(0, currentStageIndex);
+      // Search forward from the current point
+      currentStageConfig = pipelineConfig.slice(startIndex).find(hasInterviewers);
+      
+      // Fallback: If nothing ahead, search from the very beginning
+      if (!currentStageConfig) {
+        currentStageConfig = pipelineConfig.find(hasInterviewers);
+      }
+    }
+    // -----------------------------------------------------
+
+    // If there are literally no interviewers assigned to any stage in the whole job, stop.
+    if (!currentStageConfig) {
+      console.log(`No valid pipeline stage with interviewers found for application ${freshApplication.id}`);
+      await transaction.rollback();
+      return false;
     }
     
     let allowedInterviewerIds = currentStageConfig?.interviewerIds || [];
@@ -133,12 +156,12 @@ async function tryScheduleCandidate(application: any) {
       await transaction.rollback();
       return false; 
     }
-
+    
     await availableSlot.update({ isBooked: true }, { transaction });
 
     // Use the exact stage name from the config
     const finalRoundName = currentStageConfig?.name || currentStageName;
-
+    await freshApplication.update({ currentStage: finalRoundName }, { transaction });
     await Interview.create(
       {
         applicationId: freshApplication.id,

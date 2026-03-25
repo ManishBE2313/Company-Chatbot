@@ -26,20 +26,57 @@ export class ScorecardController {
         ? req.headers["x-user-email"]
         : null;
 
+      // 1. Create the Scorecard
       const scorecard = await ApplicationService.createScorecard(req.body, actingUserEmail);
+      
+      // 2. Fetch the associated Interview
       const interview = await InterviewRepository.findById(req.body.interviewId);
 
       if (interview) {
-        await PipelineService.transitionState(
-          interview.applicationId,
-          "EVALUATING",
-          scorecard.interviewerId,
-          `Scorecard Submitted: ${req.body.recommendation}`
-        );
+        // GUARANTEE 1: Instantly mark the current interview as COMPLETED so it never repeats.
+        await interview.update({ status: "COMPLETED" });
+
+        const isPositiveHire = req.body.recommendation === "HIRE" || req.body.recommendation === "STRONG_HIRE";
+        
+        // Fetch the application and job to check the pipeline configuration
+        const { ApplicationRepository } = await import("../repositories/application");
+        const application = await ApplicationRepository.findApplicationById(interview.applicationId);
+        const pipelineConfig = application?.job?.pipelineConfig || [];
+        
+        // Find where we currently are in the pipeline
+        const currentStageIndex = pipelineConfig.findIndex((stage: any) => stage.name === interview.roundName);
+        const hasNextRound = currentStageIndex !== -1 && currentStageIndex < pipelineConfig.length - 1;
+
+        if (isPositiveHire && hasNextRound) {
+          // GUARANTEE 2: Grab the EXACT NEXT stage from the pipeline
+          const nextStage = pipelineConfig[currentStageIndex + 1];
+          
+          // GUARANTEE 3: Hard-update the database so it physically moves to the new stage
+          await application.update({ 
+            status: "SCHEDULING",
+            currentStage: nextStage.name 
+          }); 
+          
+          // Log the transition in the history
+          await PipelineService.transitionState(
+            interview.applicationId,
+            "SCHEDULING",
+            scorecard.interviewerId,
+            `Passed ${interview.roundName}. Auto-advancing to ${nextStage.name}.`
+          );
+        } else {
+          // If it's the LAST stage, or if they got "NO_HIRE"/"HOLD", stop scheduling and move to EVALUATING
+          await PipelineService.transitionState(
+            interview.applicationId,
+            "EVALUATING",
+            scorecard.interviewerId,
+            `Scorecard Submitted: ${req.body.recommendation}. Pipeline finished or candidate on hold.`
+          );
+        }
       }
 
       res.status(201).json({
-        message: "Scorecard submitted successfully. Application moved to Evaluating.",
+        message: "Scorecard processed and pipeline updated successfully.",
         data: scorecard,
       });
     } catch (error) {
