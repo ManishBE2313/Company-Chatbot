@@ -15,7 +15,9 @@ export class InterviewSlotService {
    if (!user) {
      throw new Error("User not found");
    }
-
+   if (user.role !== "interviewer"&& user.role !== "admin" && user.role !== "superadmin") {
+     throw new Error("Unauthorized: Only users with the 'interviewer' role can create interview slots.");
+   }
 
    if (startTime >= endTime) {
      throw new Error("Start time must be before end time");

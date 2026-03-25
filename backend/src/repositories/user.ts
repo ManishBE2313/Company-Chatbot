@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import { UserRole } from "../../models/user";
 import { User } from "../config/database";
 
@@ -36,5 +37,20 @@ export class UserRepository {
 
   public static async findByEmail(email: string) {
     return User.findOne({ where: { email: email.trim() } });
+  }
+  /**
+   * Fetches all users who have permission to conduct interviews.
+   */
+  public static async findEligibleInterviewers() {
+    return await User.findAll({
+      where: {
+        role: {
+          [Op.in]: ["interviewer", "admin", "superadmin"],
+        },
+      },
+      // Security: Only return the fields necessary for the frontend dropdown
+      attributes: ["id", "firstName", "lastName", "email", "role"],
+      order: [["firstName", "ASC"]],
+    });
   }
 }

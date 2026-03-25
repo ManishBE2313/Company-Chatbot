@@ -4,7 +4,8 @@ import * as React from "react";
 import { Button } from "@/components/ui/Button";
 import { PipelineStageConfig } from "@/types/hr";
 import { cn } from "@/utils/classNames";
-import { Plus, Settings2, Trash2, X } from "lucide-react";
+import { Plus, Settings2, Trash2, X, User } from "lucide-react";
+import { useInterviewers } from "@/hooks/useHRData"; // NEW IMPORT
 
 interface PipelineConfigDrawerProps {
   isOpen: boolean;
@@ -31,6 +32,9 @@ export function PipelineConfigDrawer({
   error,
 }: PipelineConfigDrawerProps) {
   const [rounds, setRounds] = React.useState<PipelineStageConfig[]>([]);
+  
+  // NEW: Fetch eligible interviewers
+  const { interviewers } = useInterviewers();
 
   React.useEffect(() => {
     setRounds(initialValue && initialValue.length > 0 ? initialValue : [emptyRound(0)]);
@@ -52,15 +56,54 @@ export function PipelineConfigDrawer({
     setRounds((current) => current.filter((_, roundIndex) => roundIndex !== index));
   };
 
+  // NEW: Handler to add an interviewer from the dropdown
+  const handleAddInterviewer = (roundIndex: number, interviewerEmail: string) => {
+    if (!interviewerEmail) return;
+    
+    const selectedInterviewer = interviewers.find(i => i.email === interviewerEmail);
+    if (!selectedInterviewer) return;
+
+    const round = rounds[roundIndex];
+    
+    // Prevent duplicates
+    if (round.interviewerEmails?.includes(selectedInterviewer.email)) return;
+
+    updateRound(roundIndex, {
+      interviewerIds: [...(round.interviewerIds || []), selectedInterviewer.id],
+      interviewerEmails: [...(round.interviewerEmails || []), selectedInterviewer.email],
+    });
+  };
+
+  // NEW: Handler to remove an interviewer chip
+  const handleRemoveInterviewer = (roundIndex: number, emailToRemove: string) => {
+    const round = rounds[roundIndex];
+    const indexToRemove = round.interviewerEmails?.indexOf(emailToRemove) ?? -1;
+    
+    if (indexToRemove === -1) return;
+
+    const newEmails = [...(round.interviewerEmails || [])];
+    const newIds = [...(round.interviewerIds || [])];
+    
+    newEmails.splice(indexToRemove, 1);
+    
+    // If we have matching IDs, remove the ID at the same index
+    if (newIds.length === (round.interviewerEmails || []).length) {
+      newIds.splice(indexToRemove, 1);
+    }
+
+    updateRound(roundIndex, {
+      interviewerEmails: newEmails,
+      interviewerIds: newIds,
+    });
+  };
+
   const handleSave = async () => {
     const normalized = rounds
       .map((round, index) => ({
         id: round.id || `round-${index + 1}`,
         name: round.name.trim(),
         interviewerIds: round.interviewerIds || [],
-        interviewerEmails: (round.interviewerEmails || [])
-          .map((email) => email.trim())
-          .filter(Boolean),
+        interviewerEmails: round.interviewerEmails || [],
       }))
       .filter((round) => round.name.length > 0);
 
@@ -125,24 +168,53 @@ export function PipelineConfigDrawer({
                   />
                 </Field>
 
-                <Field label="Interviewer emails">
-                  <textarea
-                    value={(round.interviewerEmails || []).join(", ")}
-                    onChange={(event) =>
-                      updateRound(index, {
-                        interviewerEmails: event.target.value
-                          .split(",")
-                          .map((value) => value.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                    rows={3}
-                    placeholder="jane@company.com, alex@company.com"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-700 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                  <p className="mt-2 text-[12px] text-slate-400">
-                    Comma-separated. Stored with the round so HR can see intended owners.
-                  </p>
+                <Field label="Assigned Interviewers">
+                  
+                  {/* Selected Interviewers Chips */}
+                  {(round.interviewerEmails || []).length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      {round.interviewerEmails?.map((email) => {
+                        const matchedUser = interviewers.find(i => i.email === email);
+                        const displayName = matchedUser ? `${matchedUser.firstName} ${matchedUser.lastName}` : email;
+                        
+                        return (
+                          <div key={email} className="flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 pl-2.5 pr-1 py-1 text-[12px] text-indigo-700">
+                            <User size={12} className="opacity-60" />
+                            <span>{displayName}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveInterviewer(index, email)}
+                              className="ml-1 rounded-full p-0.5 hover:bg-indigo-200 transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Dropdown to add more */}
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-700 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                    onChange={(e) => {
+                      handleAddInterviewer(index, e.target.value);
+                      e.target.value = ""; // Reset dropdown after selection
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>+ Add interviewer...</option>
+                    {interviewers.map((interviewer) => (
+                      <option 
+                        key={interviewer.id} 
+                        value={interviewer.email}
+                        disabled={round.interviewerEmails?.includes(interviewer.email)}
+                      >
+                        {interviewer.firstName} {interviewer.lastName} ({interviewer.email})
+                      </option>
+                    ))}
+                  </select>
+                  
                 </Field>
               </div>
             </div>

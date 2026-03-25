@@ -48,4 +48,20 @@ export class UserController {
       next(error);
     }
   }
+
+  public static async getEligibleInterviewers(req: any, res: Response, next: NextFunction) {
+    try {
+      // NOTE: If you wanted to filter by specific roles later (e.g., ?role=admin), 
+      // you would define validationRules and call validateQueryParams(req.query, validationRules) here.
+
+      const interviewers = await UserService.getEligibleInterviewers();
+
+      res.status(200).json({
+        success: true,
+        data: interviewers,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
