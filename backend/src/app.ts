@@ -12,11 +12,16 @@ import notificationRouter from "./routes/notification";
 import interviewSlotRouter from "./routes/interviewSlot";
 import interviewRouter from "./routes/interview";
 import batchIngestRouter from "./routes/hr/batchIngest";
+import dotenv from "dotenv";
+import { startSlotSyncCron } from "./cron/syncInterviewSlots";
+dotenv.config();
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+startSlotSyncCron();
 
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok" });
