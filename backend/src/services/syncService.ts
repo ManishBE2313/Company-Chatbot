@@ -32,7 +32,7 @@ export async function syncInterviewerSlots(interviewer) {
 
     const busy = extractBusySlots(events);
     const free = getFreeWindows(day.start, day.end, busy);
-    const slots = generateSlots(free, 30);
+    const slots = generateSlots(free, 60);  // 60 minutes slots 
 
     allSlots.push(...slots);
   }

@@ -14,7 +14,7 @@ import { syncInterviewerSlots } from "../services/syncService";
  */
 export function startSlotSyncCron() {
       console.log(" Cron initialized");
-  cron.schedule("*/1 * * * *", async () => {
+  cron.schedule("0 */2 * * *", async () => {
     console.log("Running slot sync...");
 
     const interviewers = await getAllActiveInterviewers();
