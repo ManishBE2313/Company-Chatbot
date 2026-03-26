@@ -1,25 +1,55 @@
 import os
 import requests
 import msal
+import time
 from pathlib import Path
 
+# --- NEW: Token Manager Class for caching ---
+class SharePointTokenManager:
+    def __init__(self):
+        self._cache = {}  # tenant_id -> {token, expires_at}
+
+    def get_token(self, tenant_id: str, client_id: str, client_secret: str) -> str:
+        # Return cached token if it is still valid (60-second buffer)
+        cached = self._cache.get(tenant_id)
+        if cached and cached['expires_at'] > time.time() + 60:
+            return cached['token']
+
+        # Acquire new token
+        app = msal.ConfidentialClientApplication(
+            client_id=client_id,
+            client_credential=client_secret,
+            authority=f'https://login.microsoftonline.com/{tenant_id}'
+        )
+        
+        # We use .default scope for App-Only (Client Credentials) flow
+        result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
+        
+        if 'access_token' not in result:
+            raise Exception(f"Failed to get token: {result.get('error_description')}")
+
+        # Cache the new token
+        self._cache[tenant_id] = {
+            'token': result['access_token'],
+            'expires_at': time.time() + result.get('expires_in', 3599)
+        }
+        return result['access_token']
+
+# Create a global instance so the cache persists across API calls
+token_manager = SharePointTokenManager()
+
+# --- MODIFIED: Wrapper to maintain compatibility with your existing code ---
 def get_msgraph_token():
-    """Authenticates with Entra ID and returns an access token."""
-    client_id = os.getenv("MS_CLIENT_ID")
-    client_secret = os.getenv("MS_CLIENT_SECRET")
-    tenant_id = os.getenv("MS_TENANT_ID")
-    authority = f"https://login.microsoftonline.com/{tenant_id}"
+    """Authenticates with Entra ID and returns a cached access token."""
+    client_id = os.getenv("SHAREPOINT_CLIENT_ID")
+    client_secret = os.getenv("SHAREPOINT_CLIENT_SECRET")
+    tenant_id = os.getenv("SHAREPOINT_TENANT_ID") # Do not use "common" for App-Only flow, use your specific tenant ID
     
-    app = msal.ConfidentialClientApplication(
-        client_id, authority=authority, client_credential=client_secret
-    )
-    
-    # Request token for Microsoft Graph API
-    result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
-    if "access_token" in result:
-        return result["access_token"]
-    else:
-        raise Exception(f"Failed to get token: {result.get('error_description')}")
+    if not all([client_id, client_secret, tenant_id]):
+         raise ValueError("Missing Microsoft Graph credentials in environment variables.")
+         
+    return token_manager.get_token(tenant_id, client_id, client_secret)
+
 
 def download_from_sharepoint(site_id: str, download_path: Path):
     """Downloads files from a SharePoint site to the local directory."""
@@ -28,7 +58,6 @@ def download_from_sharepoint(site_id: str, download_path: Path):
     headers = {"Authorization": f"Bearer {token}"}
     
     # Microsoft Graph API endpoint to get the root drive of a site
-    # Microsoft Graph API endpoint pointing to your specific HR folder
     endpoint = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drive/root:/BlockExcel/People.Blockexcel.employee policies:/children"
     
     response = requests.get(endpoint, headers=headers)
