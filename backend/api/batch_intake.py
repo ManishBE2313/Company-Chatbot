@@ -38,11 +38,46 @@ async def process_batch_resumes(job_id: str, folder_url: str):
         graph_endpoint = f"https://graph.microsoft.com/v1.0/shares/{encoded_url}/driveItem/children"
         
         async with httpx.AsyncClient(timeout=120.0) as client:
-            # Fetch folder items from SharePoint
-            response = await client.get(graph_endpoint, headers=headers)
-            response.raise_for_status()
-            items = response.json().get('value', [])
-            
+            try:
+                # Fetch folder items from SharePoint
+                response = await client.get(graph_endpoint, headers=headers)
+                response.raise_for_status()
+                items = response.json().get('value', [])
+                
+            except httpx.HTTPStatusError as http_err:
+                # Catch 401 Unauthorized or 403 Forbidden
+                if http_err.response.status_code in (401, 403):
+                    print(f"[Batch Ingest] Unauthorized. Triggering Admin Email for {folder_url}")
+                    
+                    # Target your newly created Node.js endpoint
+                    nodejs_backend_url = os.getenv("NODEJS_BACKEND_URL", "http://127.0.0.1:3000")
+                    mail_endpoint = f"{nodejs_backend_url}/api/notifications/sharepoint-grant"
+                    
+                    mail_payload = {
+                        "email": "manish.singh@blockexcel.com", # Target admin
+                        "folderUrl": folder_url,
+                        "clientId": os.getenv("SHAREPOINT_CLIENT_ID", "MISSING_CLIENT_ID"),
+                        "encodedUrl": encoded_url
+                    }
+                    
+                    try:
+                        # Capture the response from Node.js
+                        mail_response = await client.post(mail_endpoint, json=mail_payload)
+                        
+                        # Force Python to throw an error if Node.js returns a 404 or 500
+                        mail_response.raise_for_status() 
+                        
+                        print("[Batch Ingest] Admin email triggered successfully.")
+                    except httpx.HTTPStatusError as mail_http_err:
+                        # This will tell you if Node.js rejected the request!
+                        print(f"[Batch Ingest] Node.js rejected the email request: {mail_http_err.response.status_code} - {mail_http_err.response.text}")
+                    except Exception as mail_err:
+                        print(f"[Batch Ingest] Failed to connect to Node.js for email: {mail_err}")
+                        
+                    return # Stop processing this batch since we don't have access
+                else:
+                    raise http_err # Re-raise if it's a 404, 500, etc.
+
             # Filter for PDF files only
             pdf_files = [item for item in items if 'file' in item and item['name'].lower().endswith('.pdf')]
             

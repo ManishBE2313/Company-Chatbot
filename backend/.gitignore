@@ -85,3 +85,4 @@ coverage/
 ehthumbs.db
 Thumbs.db
 uploads/
+api/.env
