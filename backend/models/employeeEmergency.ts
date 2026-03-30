@@ -8,8 +8,8 @@ export default function EmployeeEmergencyModel(sequelize: Sequelize) {
       primaryKey: true,
     },
     employeeId: DataTypes.UUID,
-    name: DataTypes.STRING,
-    relation: DataTypes.STRING,
-    phone: DataTypes.STRING,
+    name: DataTypes.STRING || null,
+    relation: DataTypes.STRING || null,
+    phone: DataTypes.STRING || null,
   });
 }

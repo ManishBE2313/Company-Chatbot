@@ -1,3 +1,4 @@
+import { User } from "../config/database";
 import {
   Employee,
   EmployeeContact,
@@ -8,7 +9,12 @@ import {
 } from "../config/database";
 
 export class EmployeeRepository {
-
+public static async findByWorkEmail(email: string) {
+  console.log("yaha")
+    return await User.findOne({
+         where: { email : email },
+    });
+  }
   // 🔹 CREATE MAIN EMPLOYEE
   public static async createEmployee(data: any, transaction: any) {
     return Employee.create(

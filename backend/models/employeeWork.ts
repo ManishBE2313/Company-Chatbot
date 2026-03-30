@@ -9,8 +9,8 @@ export default function EmployeeWorkModel(sequelize: Sequelize) {
       primaryKey: true,
     },
     employeeId: DataTypes.UUID,
-    reportingManager: DataTypes.STRING,
-    dateOfJoining: DataTypes.DATE,
-    annualCompensation: DataTypes.FLOAT,
+    reportingManager: DataTypes.STRING || null,
+    dateOfJoining: DataTypes.DATE || null,
+    annualCompensation: DataTypes.FLOAT || null,
   });
 }

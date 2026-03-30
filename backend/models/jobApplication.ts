@@ -98,7 +98,7 @@ export default function JobApplicationModel(
         allowNull: true,
       },
       aiTags: {
-        type: DataTypes.JSONB,
+        type: DataTypes.JSON,
         field: "ai_tags",
         allowNull: true,
       },

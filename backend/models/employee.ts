@@ -9,6 +9,7 @@ export interface EmployeeAttributes {
   band?: string;
   location?: string;
   workEmail: string;
+  profileCompleted: boolean; 
 }
 
 export interface EmployeeInstance
@@ -57,6 +58,11 @@ export default function EmployeeModel(
         unique: true,
         field: "work_email",
       },
+       profileCompleted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: "profile_completed",
+    },
     },
     {
       tableName: "employees",

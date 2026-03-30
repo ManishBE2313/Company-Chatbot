@@ -54,4 +54,5 @@ export interface Employee {
   contactDetails: ContactDetails;
   aboutMe: AboutMe;
   workInfo: WorkInfo;
+  profileCompleted: boolean;
 }

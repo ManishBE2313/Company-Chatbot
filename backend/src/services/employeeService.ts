@@ -71,32 +71,92 @@ export class EmployeeService {
 
 
   //  GET SINGLE EMPLOYEE (FULL DETAILS)
-  public static async getEmployeeById(id: string) {
-    return Employee.findByPk(id, {
-      include: [
-        { model: EmployeeContact },
-        { model: EmployeePersonal },
-        { model: EmployeeWork },
-        { model: EmployeeEmergency },
-        { model: EmployeeEducation },
-      ],
-    });
+  public static async getEmployeeByEmail(email: string) {
+  console.log("reached service")
+  let employee = await Employee.findOne({
+    where: { workEmail: email },
+    include: [
+      { model: EmployeeContact },
+      { model: EmployeePersonal },
+      { model: EmployeeWork },
+      { model: EmployeeEmergency },
+      { model: EmployeeEducation },
+    ],
+  });
+   if (!employee) {
+    console.log("Employee not found");
+    return null;
+}
+     return employee;
   }
 
 
 
   //  UPDATE EMPLOYEE
   public static async updateEmployee(id: string, data: any) {
-    const employee = await Employee.findByPk(id);
+  const employee = await Employee.findByPk(id);
 
-    if (!employee) {
-      throw new Error("Employee not found");
-    }
-
-    await employee.update(data);
-
-    return employee;
+  if (!employee) {
+    throw new Error("Employee not found");
   }
+
+  // 1. Update main employee table (only its fields)
+  await employee.update({
+    designation: data.designation,
+    band: data.band,
+    location: data.location,
+  });
+
+  // 2. Contact
+  if (data.contact) {
+    await EmployeeContact.upsert({
+      ...data.contact,
+      employeeId: id,
+    });
+  }
+
+  // 3. Personal
+  if (data.personal) {
+    await EmployeePersonal.upsert({
+      ...data.personal,
+      employeeId: id,
+    });
+  }
+
+  // 4. Work
+  if (data.work) {
+    await EmployeeWork.upsert({
+      ...data.work,
+      employeeId: id,
+    });
+  }
+
+  // 5. Emergency
+  if (data.emergency) {
+    await EmployeeEmergency.upsert({
+      ...data.emergency,
+      employeeId: id,
+    });
+  }
+
+  // 6. Education (array)
+  if (data.education?.length) {
+    // delete old
+    await EmployeeEducation.destroy({
+      where: { employeeId: id },
+    });
+
+    // insert new
+    const educationData = data.education.map((edu: any) => ({
+      ...edu,
+      employeeId: id,
+    }));
+
+    await EmployeeEducation.bulkCreate(educationData);
+  }
+
+  return { message: "Employee updated successfully" };
+}
 
 
 

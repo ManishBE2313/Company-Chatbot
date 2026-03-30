@@ -104,15 +104,29 @@ export default function Home() {
 
   // Fetch role so we can conditionally show the HR Portal link.
   // Reuses the existing getCurrentUser call from apiClient.ts — no new endpoint needed.
-  const [userRole, setUserRole] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    getCurrentUser()
-      .then((u) => setUserRole(u.role ?? "employee"))
-      .catch(() => setUserRole("employee"));
-  }, []);
-
+ const [user, setUser] = React.useState<{
+  email: string | null;
+  role: string;
+} | null>(null);
+React.useEffect(() => {
+  getCurrentUser()
+    .then((u) =>
+      setUser({
+        email: u.email,
+        role: u.role ?? "employee",
+      })
+    )
+    .catch(() =>
+      setUser({
+        email: "",
+        role: "employee",
+      })
+    );
+}, []);
+   const userEmail = user?.email;
+  const userRole = user?.role;
   const canAccessHRPortal = userRole === "interviewer" || userRole === "admin" || userRole === "superadmin";
-
+  const canAccessEmployeePortal = userRole === "user" || userRole === "admin" || userRole === "superadmin"; // role to be changed to employee
   const activePolicy =
     policiesData.find((p) => p.id === activePolicyId) || policiesData[0];
 
@@ -190,6 +204,15 @@ export default function Home() {
           <div className="text-[11px] font-bold tracking-wider text-slate-400 mb-4 px-2 uppercase">
             User
           </div>
+          {canAccessEmployeePortal && (
+            <button
+              onClick={() => router.push(`employee/${userEmail}`)}
+              className="flex items-center gap-3 px-2 py-2 w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors text-[14px] font-medium mb-1"
+            >
+              <ShieldCheck size={16} className="text-indigo-500" />
+              <span>Employee Portal</span>
+            </button>
+          )}
 
           {/* HR Portal button — shown to interviewer / admin / superadmin */}
           {canAccessHRPortal && (

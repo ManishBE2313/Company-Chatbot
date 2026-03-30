@@ -20,8 +20,11 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Job } from "@/types/hr";
+import { useState } from "react";
+import AddEmployeeModal from "@/components/hr/AddEmployeeModal";
 
 export default function HRDashboardPage() {
+    const [open, setOpen] = useState(false);
   const { jobs, isLoading, refetch } = useJobs();
   const { user } = useHRCurrentUser();
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
@@ -61,6 +64,18 @@ export default function HRDashboardPage() {
               <Plus size={14} />
               New Job
             </Button>
+             <div className="p-6">
+      <button
+        onClick={() => setOpen(true)}
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+      >
+        Add Employee
+      </button>
+
+      {open && <AddEmployeeModal onClose={() => setOpen(false)} />}
+    </div>
+
+         
           </div>
         )}
       </div>

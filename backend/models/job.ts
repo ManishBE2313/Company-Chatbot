@@ -49,7 +49,7 @@ export default function JobModel(
         allowNull: false,
       },
       pipelineConfig: {
-        type: DataTypes.JSONB,
+        type: DataTypes.JSON,
         field: "pipeline_config",
         allowNull: true,
       },

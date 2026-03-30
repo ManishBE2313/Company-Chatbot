@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from urllib.parse import urlencode
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-
+COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", "localhost")
 # --- Microsoft SSO Configuration ---
 MS_CLIENT_ID = os.getenv("MS_CLIENT_ID", "your_ms_client_id")
 MS_CLIENT_SECRET = os.getenv("MS_CLIENT_SECRET", "your_ms_client_secret")
@@ -23,7 +23,7 @@ MS_GRAPH_URL = "https://graph.microsoft.com/v1.0/me"
 
 JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-enterprise-key")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-NODE_API_BASE_URL = os.getenv("ROOT_URL", "http://127.0.0.1:3000").rstrip("/")
+NODE_API_BASE_URL = os.getenv("ROOT_URL", "http://localhost:3000").rstrip("/")
 VALID_ROLES = {"user", "admin", "superadmin","interviewer"}
 
 oauth_states = set()
@@ -52,7 +52,12 @@ async def upsert_user_and_get_role(client: httpx.AsyncClient, email: str, first_
         if role in VALID_ROLES:
             return role
     except httpx.HTTPError as error:
-        print(f"User upsert failed: {error}")
+        print("User upsert failed:")
+    if error.response:
+        print("Status:", error.response.status_code)
+        print("Body:", error.response.text)
+    else:
+        print(error)
 
     return "user"
 
@@ -140,6 +145,7 @@ async def sso_login_callback(request: Request, code: str = None, state: str = No
         "httponly": True,
         "samesite": "lax",
         "secure": False, # Change to True in Production
+        "domain": COOKIE_DOMAIN if COOKIE_DOMAIN else "localhost",
         "path": "/",
         "max_age":  12 * 60 * 60 # 12 hours in seconds
     }

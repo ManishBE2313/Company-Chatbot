@@ -1,14 +1,38 @@
 import { Request, Response, NextFunction } from "express";
 import  { EmployeeService } from "../services/employeeService";
+import { EmployeeRepository } from "../repositories/employeeRepository";
 
 export class EmployeeController {
+// get my profile
+ public static async getMyProfile(req: any, res: any) {
+  try {
+    const email = req.user.sub;
 
+    const employee = await EmployeeRepository.findByWorkEmail(email);
+
+    if (!employee) {
+      return res.status(404).json({
+        message: "Employee not found",
+      });
+    }
+
+    return res.json({
+      data: employee,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      message: "Something went wrong",
+    });
+  }
+}
   //  CREATE FULL EMPLOYEE
   public static async createEmployee(
     req: Request,
     res: Response,
     next: NextFunction
   ) {
+    console.log("reached here")
     try {
       const employee = await EmployeeService.createEmployee(req.body);
 
@@ -39,14 +63,24 @@ export class EmployeeController {
   }
 
   // GET SINGLE EMPLOYEE (FULL DETAILS)
-  public static async getEmployeeById(
+  public static async getEmployeeByEmail(
     req: Request,
     res: Response,
     next: NextFunction
   ) {
-    const id = req.params.id as string;
+    
+   const email = (req as any).user?.sub;
+    if (!email) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+ 
+      
+    
+    
     try {
-      const employee = await EmployeeService.getEmployeeById(id);
+      const employee = await EmployeeService.getEmployeeByEmail(email);
 
       if (!employee) {
         return res.status(404).json({

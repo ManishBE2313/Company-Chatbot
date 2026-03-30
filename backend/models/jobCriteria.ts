@@ -37,7 +37,7 @@ export default function JobCriteriaModel(
         },
       },
       requirements: {
-        type: DataTypes.JSONB,
+        type: DataTypes.JSON,
         allowNull: false,
       },
       isActive: {

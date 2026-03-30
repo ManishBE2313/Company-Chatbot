@@ -2,7 +2,7 @@
 import { ChatApiRequest } from "@/types/chat";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
+const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL2 || "http://localhost:3000";
 export interface CurrentUser {
   email: string | null;
   role?: string;
@@ -95,7 +95,21 @@ export async function getCurrentUser(): Promise<CurrentUser> {
 
   return response.json();
 }
+export async function getEmployeeDetails() {
+  const response = await fetch(`${API_BASE_URL2}/api/employee/details`, {
+    method: "GET",
+    credentials: "include", 
+    cache: "no-store",
+  });
 
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || `Server error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.data; // employee object
+}
 export async function logoutUser(): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
     method: "POST",

@@ -11,12 +11,21 @@ import scorecardRouter from "./routes/scorecard";
 import notificationRouter from "./routes/notification";
 import interviewSlotRouter from "./routes/interviewSlot";
 import interviewRouter from "./routes/interview";
+import EmployeeRouter from "./routes/employee";
+import cookieParser from "cookie-parser";
+import cors from "cors";
 
 const app = express();
-
+app.use(
+  cors({
+    origin: "http://localhost:3001",
+    credentials: true,
+  })
+)
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+;
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok" });
 });
@@ -32,6 +41,7 @@ app.use("/api/scorecard", scorecardRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/slots", interviewSlotRouter);
 app.use("/api/interviews", interviewRouter);
+app.use("/api/employee", EmployeeRouter)
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(new Errors.BadRequestError("Route not found: " + req.method + " " + req.originalUrl));
