@@ -185,13 +185,13 @@ async function tryScheduleCandidate(application: any) {
     const candidateFirstName = freshApplication.candidate?.firstName || "Candidate";
     const candidateEmail = freshApplication.candidate?.email;
 
-    if (candidateEmail) {
-      await NotificationService.sendInterviewScheduled(
-        candidateEmail,
-        candidateFirstName,
-        availableSlot.startTime.toLocaleString()
-      );
-    }
+    // if (candidateEmail) {
+    //   await NotificationService.sendInterviewScheduled(
+    //     candidateEmail,
+    //     candidateFirstName,
+    //     availableSlot.startTime.toLocaleString()
+    //   );
+    // }
 
     console.log(`Successfully scheduled candidate ${freshApplication.id}.`);
     return true;

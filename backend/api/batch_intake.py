@@ -96,9 +96,20 @@ async def process_batch_resumes(job_id: str, folder_url: str):
                         
                     print(f"[Batch Ingest] Downloading and processing {file_name}...")
                     
-                    # 3. Download the PDF file into memory (no local saving required)
+                    # 3. Download the PDF file into memory
                     file_response = await client.get(download_url)
                     file_bytes = file_response.content
+
+                    # ==========================================
+                    # 3.5 ADD THIS: Save the file locally so candidate_intake.py can find it!
+                    # ==========================================
+                    local_upload_dir = os.path.join(os.getcwd(), "uploads")
+                    os.makedirs(local_upload_dir, exist_ok=True)
+                    local_file_path = os.path.join(local_upload_dir, file_name)
+
+                    with open(local_file_path, "wb") as f:
+                        f.write(file_bytes)
+                    # ==========================================
                     
                     # 4. Extract text from the PDF bytes in memory
                     pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
@@ -106,9 +117,6 @@ async def process_batch_resumes(job_id: str, folder_url: str):
                     # Read up to the first 3 pages to save tokens and find the identity
                     for page_num in range(min(3, len(pdf_reader.pages))): 
                         raw_text += pdf_reader.pages[page_num].extract_text() or ""
-                    
-                    # Store a reference URL (fallback to the SharePoint download link)
-                    temp_resume_url = file_info.get('webUrl', "https://placeholder-url.com")
                     
                     # 5. Extract Identity using ChatGroq (Llama-3)
                     prompt = f"""
@@ -138,7 +146,7 @@ async def process_batch_resumes(job_id: str, folder_url: str):
                         "firstName": extracted_data.get("firstName", "Unknown"),
                         "lastName": extracted_data.get("lastName", "Unknown"),
                         "email": extracted_data.get("email", f"unknown_{file_info['id'][:8]}@placeholder.com"),
-                        "resumeUrl": temp_resume_url
+                        "resumeUrl": file_name # <--- This works perfectly now because the file actually exists on disk!
                     }
                     
                     system_headers = {
