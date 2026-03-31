@@ -1,8 +1,10 @@
-"use strict";
+﻿"use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
 export interface ScorecardAttributes {
   id: string;
+  organizationId: string;
   interviewId: string;
   interviewerId: string;
   technicalScore: number;
@@ -27,6 +29,16 @@ export default function ScorecardModel(
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      organizationId: {
+        type: DataTypes.UUID,
+        field: "organization_id",
+        allowNull: false,
+        defaultValue: DEFAULT_ORGANIZATION_ID,
+        references: {
+          model: "organizations",
+          key: "id",
+        },
+      },
       interviewId: {
         type: DataTypes.UUID,
         field: "interview_id",
@@ -42,7 +54,7 @@ export default function ScorecardModel(
         field: "interviewer_id",
         allowNull: false,
         references: {
-          model: "users",
+          model: "employees",
           key: "id",
         },
       },
@@ -76,11 +88,11 @@ export default function ScorecardModel(
   };
 
   Scorecard.associate = (models: any) => {
+    Scorecard.belongsTo(models.organization, { foreignKey: "organizationId", as: "organization" });
     Scorecard.belongsTo(models.interview, {
       foreignKey: "interviewId",
       as: "interview",
     });
-
     Scorecard.belongsTo(models.user, {
       foreignKey: "interviewerId",
       as: "interviewer",

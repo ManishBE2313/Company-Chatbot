@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -7,6 +7,7 @@ import { getAllApplications } from "@/services/hrApiClient";
 import { ApplicationDetailDrawer } from "@/components/hr/ApplicationDetailDrawer";
 import { StatusBadge, AIScoreChip } from "@/components/hr/StatusBadge";
 import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
+import RoleManagementSection from "@/components/hr/RoleManagementSection";
 import { Application, Job } from "@/types/hr";
 import { ShieldCheck, AlertTriangle, TrendingUp, Users, Briefcase, CheckCircle, BarChart2 } from "lucide-react";
 
@@ -20,6 +21,8 @@ interface SummaryMetric {
 export default function AdminPanelPage() {
   const router = useRouter();
   const { user, isLoading: userLoading } = useHRCurrentUser();
+  const isPrivileged = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperadmin = user?.role === "superadmin";
   const { jobs, isLoading: jobsLoading } = useJobs();
 
   const [allApplications, setAllApplications] = React.useState<Application[]>([]);
@@ -27,12 +30,16 @@ export default function AdminPanelPage() {
   const [selectedApp, setSelectedApp] = React.useState<Application | null>(null);
 
   React.useEffect(() => {
-    if (!userLoading && user?.role !== "superadmin") {
+    if (!userLoading && !isPrivileged) {
       router.replace("/hr");
     }
-  }, [user, userLoading, router]);
+  }, [isPrivileged, userLoading, router]);
 
   React.useEffect(() => {
+    if (!isSuperadmin) {
+      return;
+    }
+
     const fetchAll = async () => {
       setIsFetching(true);
       try {
@@ -45,10 +52,10 @@ export default function AdminPanelPage() {
       }
     };
 
-    fetchAll();
-  }, []);
+    void fetchAll();
+  }, [isSuperadmin]);
 
-  const isLoading = userLoading || jobsLoading || isFetching;
+  const isLoading = userLoading || (isSuperadmin && (jobsLoading || isFetching));
 
   const biasFlagged = allApplications.filter((a) => a.aiTags?.some((t) => t.includes("high-bias-divergence")));
   const evaluatingQueue = allApplications.filter((a) => a.status === "EVALUATING");
@@ -78,43 +85,51 @@ export default function AdminPanelPage() {
           <ShieldCheck size={18} className="text-indigo-600" />
         </div>
         <div>
-          <h1 className="text-[20px] font-bold text-slate-800">Admin Panel</h1>
-          <p className="text-[13px] text-slate-400">Full pipeline visibility - Superadmin only</p>
+          <h1 className="text-[20px] font-bold text-slate-800">Admin Workspace</h1>
+          <p className="text-[13px] text-slate-400">
+            {isSuperadmin ? "Pipeline visibility and access governance" : "Access governance and role assignment"}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {metrics.map((m) => (
-          <div key={m.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${m.colorClass}`}>{m.icon}</div>
-            <p className="text-[22px] font-bold text-slate-800">{m.value}</p>
-            <p className="mt-0.5 text-[11px] font-medium text-slate-400">{m.label}</p>
-          </div>
-        ))}
-      </div>
+      {user?.email && <RoleManagementSection currentUserEmail={user.email} currentUserRole={user.role} />}
 
-      <Section title="Pipeline by Job" subtitle="Progress by scheduling stage for each role">
-        <div className="space-y-3">
-          {jobs.map((job) => <JobPipelineRow key={job.id} job={job} applications={allApplications.filter((a) => a.jobId === job.id)} />)}
-          {jobs.length === 0 && <EmptyNote text="No jobs created yet." />}
-        </div>
-      </Section>
-
-      <Section title="Bias-Flagged Applications" subtitle="Tier 3 detected a significant blind vs full score divergence" titleIcon={<AlertTriangle size={14} className="text-amber-500" />}>
-        {biasFlagged.length === 0 ? <EmptyNote text="No bias flags detected." icon={<CheckCircle size={16} className="text-emerald-500" />} /> : (
-          <div className="overflow-hidden rounded-xl border border-amber-100 divide-y divide-amber-50">
-            {biasFlagged.map((app) => <FlaggedRow key={app.id} application={app} job={jobs.find((j) => j.id === app.jobId)} onClick={() => setSelectedApp(app)} />)}
+      {isSuperadmin && (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {metrics.map((m) => (
+              <div key={m.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${m.colorClass}`}>{m.icon}</div>
+                <p className="text-[22px] font-bold text-slate-800">{m.value}</p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-400">{m.label}</p>
+              </div>
+            ))}
           </div>
-        )}
-      </Section>
 
-      <Section title="Evaluating Queue" subtitle="Candidates waiting on HR after interviewer feedback">
-        {evaluatingQueue.length === 0 ? <EmptyNote text="No candidates are waiting in evaluating right now." icon={<CheckCircle size={16} className="text-emerald-500" />} /> : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-100">
-            {evaluatingQueue.map((app) => <FlaggedRow key={app.id} application={app} job={jobs.find((j) => j.id === app.jobId)} onClick={() => setSelectedApp(app)} />)}
-          </div>
-        )}
-      </Section>
+          <Section title="Pipeline by Job" subtitle="Progress by scheduling stage for each role">
+            <div className="space-y-3">
+              {jobs.map((job) => <JobPipelineRow key={job.id} job={job} applications={allApplications.filter((a) => a.jobId === job.id)} />)}
+              {jobs.length === 0 && <EmptyNote text="No jobs created yet." />}
+            </div>
+          </Section>
+
+          <Section title="Bias-Flagged Applications" subtitle="Tier 3 detected a significant blind vs full score divergence" titleIcon={<AlertTriangle size={14} className="text-amber-500" />}>
+            {biasFlagged.length === 0 ? <EmptyNote text="No bias flags detected." icon={<CheckCircle size={16} className="text-emerald-500" />} /> : (
+              <div className="overflow-hidden rounded-xl border border-amber-100 divide-y divide-amber-50">
+                {biasFlagged.map((app) => <FlaggedRow key={app.id} application={app} job={jobs.find((j) => j.id === app.jobId)} onClick={() => setSelectedApp(app)} />)}
+              </div>
+            )}
+          </Section>
+
+          <Section title="Evaluating Queue" subtitle="Candidates waiting on HR after interviewer feedback">
+            {evaluatingQueue.length === 0 ? <EmptyNote text="No candidates are waiting in evaluating right now." icon={<CheckCircle size={16} className="text-emerald-500" />} /> : (
+              <div className="overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-100">
+                {evaluatingQueue.map((app) => <FlaggedRow key={app.id} application={app} job={jobs.find((j) => j.id === app.jobId)} onClick={() => setSelectedApp(app)} />)}
+              </div>
+            )}
+          </Section>
+        </>
+      )}
 
       {selectedApp && (
         <ApplicationDetailDrawer

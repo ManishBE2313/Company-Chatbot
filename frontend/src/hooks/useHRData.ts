@@ -41,6 +41,7 @@ export interface InterviewerOption {
 }
 export function useHRCurrentUser() {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
   const user = useAppSelector((state) => state.hr.currentUser);
   const status = useAppSelector((state) => state.hr.currentUserStatus);
   const error = useAppSelector((state) => state.hr.currentUserError);
@@ -65,6 +66,7 @@ export function useHRCurrentUser() {
 
 export function useJobs() {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
   const jobs = useAppSelector((state) => state.hr.jobs);
   const status = useAppSelector((state) => state.hr.jobsStatus);
   const error = useAppSelector((state) => state.hr.jobsError);
@@ -167,12 +169,13 @@ export function useCreateJob(onSuccess?: (job: Job) => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
 
   const submit = useCallback(async (payload: CreateJobPayload) => {
     setIsLoading(true);
     setError(null);
     try {
-      const job = await createJob(payload);
+      const job = await createJob(payload, currentUser?.email);
       onSuccess?.(job);
       void dispatch(fetchHRJobs());
     } catch (e: any) {
@@ -180,7 +183,7 @@ export function useCreateJob(onSuccess?: (job: Job) => void) {
     } finally {
       setIsLoading(false);
     }
-  }, [dispatch, onSuccess]);
+  }, [currentUser?.email, dispatch, onSuccess]);
 
   return { submit, isLoading, error };
 }

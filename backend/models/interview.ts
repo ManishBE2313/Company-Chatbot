@@ -1,8 +1,10 @@
-"use strict";
+﻿"use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
 export interface InterviewAttributes {
   id: string;
+  organizationId: string;
   applicationId: string;
   interviewerId: string;
   slotId: string;
@@ -27,6 +29,16 @@ export default function InterviewModel(
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      organizationId: {
+        type: DataTypes.UUID,
+        field: "organization_id",
+        allowNull: false,
+        defaultValue: DEFAULT_ORGANIZATION_ID,
+        references: {
+          model: "organizations",
+          key: "id",
+        },
+      },
       applicationId: {
         type: DataTypes.UUID,
         field: "application_id",
@@ -41,7 +53,7 @@ export default function InterviewModel(
         field: "interviewer_id",
         allowNull: false,
         references: {
-          model: "users",
+          model: "employees",
           key: "id",
         },
       },
@@ -80,21 +92,22 @@ export default function InterviewModel(
   };
 
   Interview.associate = (models: any) => {
+    Interview.belongsTo(models.organization, {
+      foreignKey: "organizationId",
+      as: "organization",
+    });
     Interview.belongsTo(models.jobApplication, {
       foreignKey: "applicationId",
       as: "application",
     });
-
     Interview.belongsTo(models.user, {
       foreignKey: "interviewerId",
       as: "interviewer",
     });
-
     Interview.belongsTo(models.interviewSlot, {
       foreignKey: "slotId",
       as: "slot",
     });
-
     Interview.hasOne(models.scorecard, {
       foreignKey: "interviewId",
       as: "scorecard",

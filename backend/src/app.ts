@@ -1,8 +1,9 @@
-import express, { NextFunction, Request, Response } from "express";
+﻿import express, { NextFunction, Request, Response } from "express";
 import authRouter from "./routes/auth";
 import candidateRouter from "./routes/candidate";
 import hrApplicationRouter from "./routes/hr/application";
 import hrJobRouter from "./routes/hr/job";
+import hrCatalogRouter from "./routes/hr/catalog";
 import userRouter from "./routes/hr/user";
 import webhookRouter from "./routes/webhook";
 import jobRouter from "./routes/job";
@@ -31,6 +32,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/candidates", candidateRouter);
 app.use("/api/hr/applications", hrApplicationRouter);
 app.use("/api/hr/jobs", hrJobRouter);
+app.use("/api/hr/catalog", hrCatalogRouter);
 app.use("/api/hr/user", userRouter);
 app.use("/api/webhooks", webhookRouter);
 app.use("/api/jobs", jobRouter);

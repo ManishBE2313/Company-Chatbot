@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -33,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Admin Panel",
     href: "/hr/admin",
     icon: <ShieldCheck size={16} />,
-    minRole: "superadmin",
+    minRole: "admin",
   },
 ];
 

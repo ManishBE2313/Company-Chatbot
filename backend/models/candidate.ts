@@ -1,11 +1,14 @@
-"use strict";
+﻿"use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
 export interface CandidateAttributes {
   id: string;
+  organizationId: string;
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string | null;
   isReferral?: boolean;
   isInternal?: boolean;
 }
@@ -26,6 +29,16 @@ export default function CandidateModel(
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      organizationId: {
+        type: DataTypes.UUID,
+        field: "organization_id",
+        allowNull: false,
+        defaultValue: DEFAULT_ORGANIZATION_ID,
+        references: {
+          model: "organizations",
+          key: "id",
+        },
+      },
       firstName: {
         type: DataTypes.STRING,
         field: "first_name",
@@ -40,6 +53,10 @@ export default function CandidateModel(
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
+      },
+      phone: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
       isReferral: {
         type: DataTypes.BOOLEAN,
@@ -63,6 +80,7 @@ export default function CandidateModel(
   };
 
   Candidate.associate = (models: any) => {
+    Candidate.belongsTo(models.organization, { foreignKey: "organizationId", as: "organization" });
     Candidate.hasMany(models.jobApplication, {
       foreignKey: "candidateId",
       as: "applications",

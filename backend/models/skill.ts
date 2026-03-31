@@ -2,24 +2,24 @@
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
 import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
-export interface JobCriteriaAttributes {
+export interface SkillAttributes {
   id: string;
   organizationId: string;
-  jobId: string;
-  requirements: Record<string, unknown>;
+  name: string;
+  category: string;
   isActive?: boolean;
 }
 
-export interface JobCriteriaInstance extends Model<JobCriteriaAttributes>, JobCriteriaAttributes {}
+export interface SkillInstance extends Model<SkillAttributes>, SkillAttributes {}
 
-export default function JobCriteriaModel(
+export default function SkillModel(
   sequelize: Sequelize,
   schema?: string
-): ModelStatic<JobCriteriaInstance> & {
+): ModelStatic<SkillInstance> & {
   associate?: (models: any) => void;
 } {
-  const JobCriteria = sequelize.define<JobCriteriaInstance>(
-    "jobCriteria",
+  const Skill = sequelize.define<SkillInstance>(
+    "skill",
     {
       id: {
         type: DataTypes.UUID,
@@ -36,43 +36,36 @@ export default function JobCriteriaModel(
           key: "id",
         },
       },
-      jobId: {
-        type: DataTypes.UUID,
-        field: "job_id",
+      name: {
+        type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
-        references: {
-          model: "jobs",
-          key: "id",
-        },
       },
-      requirements: {
-        type: DataTypes.JSON,
+      category: {
+        type: DataTypes.STRING,
         allowNull: false,
       },
       isActive: {
         type: DataTypes.BOOLEAN,
         field: "is_active",
+        allowNull: false,
         defaultValue: true,
       },
     },
     {
-      tableName: "job_criteria",
-      modelName: "jobCriteria",
+      tableName: "skills",
+      modelName: "skill",
       schema,
       timestamps: true,
+      indexes: [{ unique: true, fields: ["organization_id", "name"] }],
     }
-  ) as ModelStatic<JobCriteriaInstance> & {
+  ) as ModelStatic<SkillInstance> & {
     associate?: (models: any) => void;
   };
 
-  JobCriteria.associate = (models: any) => {
-    JobCriteria.belongsTo(models.organization, { foreignKey: "organizationId", as: "organization" });
-    JobCriteria.belongsTo(models.job, {
-      foreignKey: "jobId",
-      as: "job",
-    });
+  Skill.associate = (models: any) => {
+    Skill.belongsTo(models.organization, { foreignKey: "organizationId", as: "organization" });
+    Skill.hasMany(models.jobRoleSkill, { foreignKey: "skillId", as: "jobRoleSkills" });
   };
 
-  return JobCriteria;
+  return Skill;
 }

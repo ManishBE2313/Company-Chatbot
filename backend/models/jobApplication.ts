@@ -1,5 +1,6 @@
-"use strict";
+﻿"use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
 export type ApplicationStatus =
   | "PENDING"
@@ -13,6 +14,7 @@ export type ApplicationStatus =
 
 export interface JobApplicationAttributes {
   id: string;
+  organizationId: string;
   candidateId: string;
   jobId: string;
   resumeUrl: string;
@@ -40,6 +42,16 @@ export default function JobApplicationModel(
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
+      },
+      organizationId: {
+        type: DataTypes.UUID,
+        field: "organization_id",
+        allowNull: false,
+        defaultValue: DEFAULT_ORGANIZATION_ID,
+        references: {
+          model: "organizations",
+          key: "id",
+        },
       },
       candidateId: {
         type: DataTypes.UUID,
@@ -119,21 +131,22 @@ export default function JobApplicationModel(
   };
 
   JobApplication.associate = (models: any) => {
+    JobApplication.belongsTo(models.organization, {
+      foreignKey: "organizationId",
+      as: "organization",
+    });
     JobApplication.belongsTo(models.candidate, {
       foreignKey: "candidateId",
       as: "candidate",
     });
-
     JobApplication.belongsTo(models.job, {
       foreignKey: "jobId",
       as: "job",
     });
-
     JobApplication.hasMany(models.interview, {
       foreignKey: "applicationId",
       as: "interviews",
     });
-
     JobApplication.hasMany(models.pipelineEvent, {
       foreignKey: "applicationId",
       as: "events",
