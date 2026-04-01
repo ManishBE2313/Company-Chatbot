@@ -57,11 +57,16 @@ export class JobController {
           required: false,
           values: ["Draft", "Open", "Paused", "Closed"],
         },
+        reviewStatus: {
+          type: "enum",
+          required: false,
+          values: ["approved", "needs_review", "blocked"],
+        },
       };
 
       validateQueryParams(req.query, validationRules);
 
-      const result = await JobService.listJobsForHR(req.query.status);
+      const result = await JobService.listJobsForHR(req.query.status, req.query.reviewStatus);
 
       res.status(200).json({
         data: result.jobs,
@@ -70,6 +75,7 @@ export class JobController {
           statusCounts: result.statusCounts,
           filter: {
             status: req.query.status ?? null,
+            reviewStatus: req.query.reviewStatus ?? null,
           },
         },
       });
@@ -89,6 +95,31 @@ export class JobController {
       const job = await JobService.getJobForHR(req.params.jobId);
 
       res.status(200).json({ data: job });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  public static async updateJobReviewStatus(req: any, res: Response, next: NextFunction) {
+    try {
+      const validationRules: QueryValidationRules = {
+        jobId: { type: "uuid", required: true },
+        status: { type: "enum", required: true, values: ["Draft", "Open", "Paused", "Closed"] },
+        reviewStatus: { type: "enum", required: true, values: ["approved", "needs_review", "blocked"] },
+      };
+
+      validateQueryParams({ ...req.params, ...req.body }, validationRules);
+
+      const job = await JobService.updateJobReviewStatus(
+        req.params.jobId,
+        req.body.status,
+        req.body.reviewStatus
+      );
+
+      res.status(200).json({
+        message: "Job review updated successfully.",
+        data: job,
+      });
     } catch (err) {
       next(err);
     }

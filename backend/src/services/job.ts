@@ -5,6 +5,7 @@ import { UserRepository } from "../repositories/user";
 import { getTransaction } from "../config/database";
 import { DEFAULT_ORGANIZATION_ID } from "../constants/system";
 import { Transaction } from "sequelize";
+import axios from "axios";
 
 export interface CreateJobPayload {
   title?: string;
@@ -191,9 +192,12 @@ export class JobService {
     }
   }
 
-  public static async listJobsForHR(status?: JobAttributes["status"]) {
+  public static async listJobsForHR(
+    status?: JobAttributes["status"],
+    reviewStatus?: JobAttributes["reviewStatus"]
+  ) {
     const [result, statusCounts] = await Promise.all([
-      JobRepository.findJobsForHR(status),
+      JobRepository.findJobsForHR(status, reviewStatus),
       JobRepository.countJobsByStatus(),
     ]);
 
@@ -214,6 +218,25 @@ export class JobService {
     return job;
   }
 
+  public static async updateJobReviewStatus(
+    jobId: string,
+    status: JobAttributes["status"],
+    reviewStatus: JobAttributes["reviewStatus"]
+  ) {
+    await this.getJobForHR(jobId);
+
+    const affectedCount = await JobRepository.updateJob(jobId, {
+      status,
+      reviewStatus,
+    });
+
+    if (!affectedCount) {
+      throw new Errors.SystemError("Job review status could not be updated.");
+    }
+
+    return this.getJobForHR(jobId);
+  }
+
   public static async updatePipelineConfig(jobId: string, pipelineConfig: PipelineStagePayload[]) {
     await this.getJobForHR(jobId);
     const sanitizedPipelineConfig = sanitizePipelineConfig(pipelineConfig) || [];
@@ -227,5 +250,92 @@ export class JobService {
     }
 
     return this.getJobForHR(jobId);
+  }
+  public static async processDraftJobEvaluation(payload: {
+    title: string;
+    department: string;
+    level: string;
+    requirements: any;
+    organizationId: string;
+    createdById: string;
+  }) {
+    const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000";
+    let aiEvaluation;
+
+    // 1. Call Python AI for evaluation
+    try {
+      const aiResponse = await axios.post(`${PYTHON_API_URL}/api/jobs/evaluate-jd`, {
+        title: payload.title,
+        department: payload.department,
+        level: payload.level,
+        requirements: payload.requirements,
+      });
+      aiEvaluation = aiResponse.data;
+    } catch (aiError) {
+      console.error("[JobService] Python AI call failed:", aiError);
+      aiEvaluation = {
+        confidenceScore: 0,
+        isApproved: false,
+        mismatchedSkills: ["AI Service Unavailable"],
+        warnings: ["Job requires manual HR review due to system error."],
+      };
+    }
+
+    // 2. Determine Job Status
+    const jobStatus: JobAttributes["status"] = aiEvaluation.isApproved ? "Open" : "Draft";
+    const reviewStatus = aiEvaluation.isApproved ? "approved" : "needs_review";
+    const formattedRequirements = typeof payload.requirements === "string" 
+      ? { rawText: payload.requirements } 
+      : payload.requirements;
+
+    // 3. Database Transaction via Repository
+    let transaction: Transaction | undefined;
+    let newJob;
+
+    try {
+      transaction = await getTransaction();
+
+      newJob = await JobRepository.createJob(
+        {
+          organizationId: payload.organizationId || DEFAULT_ORGANIZATION_ID,
+          createdById: payload.createdById,
+          title: payload.title,
+          department: payload.department || "Unassigned",
+          location: "Remote",
+          status: jobStatus,
+          reviewStatus: reviewStatus,
+          headcount: 1,
+          aiMatchPercentage: aiEvaluation.confidenceScore,
+        },
+        transaction
+      );
+
+      await JobRepository.createJobCriteria(
+        {
+          organizationId: payload.organizationId || DEFAULT_ORGANIZATION_ID,
+          jobId: newJob.id,
+          requirements: formattedRequirements,
+          isActive: true,
+        },
+        transaction
+      );
+
+      await transaction.commit();
+    } catch (dbError) {
+      if (transaction) await transaction.rollback();
+      throw new Errors.SystemError("Failed to create draft job in database.");
+    }
+
+    // 4. Post-Creation Hook for AI Vector Setup
+    if (aiEvaluation.isApproved) {
+      const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+      axios.post(`${fastApiUrl}/api/jobs/setup`, {
+        jobId: newJob.id,
+        title: newJob.title,
+        requirements: formattedRequirements,
+      }).catch((err) => console.error("Failed to trigger FastAPI job setup:", err.message));
+    }
+
+    return { job: newJob, aiEvaluation };
   }
 }

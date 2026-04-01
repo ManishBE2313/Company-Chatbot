@@ -1,6 +1,5 @@
 // src/app/hr/page.tsx
 // HR Dashboard — top-level overview showing all jobs and their pipeline health.
-// Admin/superadmin also see "Create Job" and "Upload CV" action buttons here.
 
 "use client";
 
@@ -9,6 +8,7 @@ import Link from "next/link";
 import { useJobs, useHRCurrentUser } from "@/hooks/useHRData";
 import { CreateJobModal } from "@/components/hr/CreateJobModal";
 import { UploadCVModal } from "@/components/hr/UploadCVModal";
+import CreateDraftJobModal from "@/components/hr/CreateDraftJobModal"; 
 import { Button } from "@/components/ui/Button";
 import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 import {
@@ -28,6 +28,7 @@ export default function HRDashboardPage() {
 
   const [showCreateJob, setShowCreateJob] = React.useState(false);
   const [showUploadCV, setShowUploadCV] = React.useState(false);
+  const [showDraftJob, setShowDraftJob] = React.useState(false); // <-- Added state
 
   return (
     <div className="px-8 py-8 max-w-5xl mx-auto">
@@ -41,9 +42,10 @@ export default function HRDashboardPage() {
           </p>
         </div>
 
-        {/* Action buttons — only visible to admin/superadmin */}
-        {isAdmin && (
-          <div className="flex items-center gap-2">
+        {/* Action buttons */}
+        <div className="flex items-center gap-2">
+          {/* Only Admins see Upload CV */}
+          {isAdmin && (
             <Button
               size="sm"
               variant="outline"
@@ -53,16 +55,28 @@ export default function HRDashboardPage() {
               <Upload size={14} />
               Upload CV
             </Button>
-            <Button
-              size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
-              onClick={() => setShowCreateJob(true)}
-            >
-              <Plus size={14} />
-              New Job
-            </Button>
-          </div>
-        )}
+          )}
+          
+          {/* Everyone sees standard "New Job" */}
+          <Button
+            size="sm"
+            className="bg-slate-800 hover:bg-slate-900 text-white gap-1.5"
+            onClick={() => setShowCreateJob(true)}
+          >
+            <Plus size={14} />
+            New Job
+          </Button>
+
+          {/* Everyone sees new "Request New Role" */}
+          <Button
+            size="sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+            onClick={() => setShowDraftJob(true)}
+          >
+            <Plus size={14} />
+            Request New Job
+          </Button>
+        </div>
       </div>
 
       {/* ── Jobs grid ── */}
@@ -71,14 +85,14 @@ export default function HRDashboardPage() {
           <AsanaSpinner size="lg" />
         </div>
       ) : jobs.length === 0 ? (
-        // Empty state — shown to new admins before any jobs exist
+        // Empty state
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
             <Briefcase size={24} className="text-slate-400" />
           </div>
           <p className="text-[15px] font-medium text-slate-600">No jobs yet</p>
           <p className="text-[13px] text-slate-400 mt-1">
-            {isAdmin ? "Create your first job to start the AI pipeline." : "No open positions at the moment."}
+            Create your first job to start the AI pipeline.
           </p>
         </div>
       ) : (
@@ -102,12 +116,21 @@ export default function HRDashboardPage() {
           onUploaded={() => setShowUploadCV(false)}
         />
       )}
+      {showDraftJob && (
+        <CreateDraftJobModal
+          isOpen={showDraftJob}
+          onClose={() => setShowDraftJob(false)}
+          onSuccess={() => {
+            setShowDraftJob(false);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // ─── Job Card ─────────────────────────────────────────────────────────────────
-// Clicking a card navigates to /hr/jobs/[jobId] for full application tracking.
 const JobCard: React.FC<{ job: Job }> = ({ job }) => {
   const statusColor =
     job.status === "Open"

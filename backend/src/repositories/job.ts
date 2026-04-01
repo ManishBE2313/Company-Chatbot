@@ -58,11 +58,18 @@ export class JobRepository {
     return affectedCount;
   }
 
-  public static async findJobsForHR(status?: JobAttributes["status"]): Promise<any> {
+  public static async findJobsForHR(
+    status?: JobAttributes["status"],
+    reviewStatus?: JobAttributes["reviewStatus"]
+  ): Promise<any> {
     const where: WhereOptions<JobAttributes> = {};
 
     if (status) {
       where.status = status;
+    }
+
+    if (reviewStatus) {
+      where.reviewStatus = reviewStatus;
     }
 
     return Job.findAndCountAll({
@@ -71,6 +78,8 @@ export class JobRepository {
         { model: JobRole, as: "jobRole" },
         { model: Location, as: "locationRef" },
         { model: InterviewPanel, as: "panel" },
+        { model: JobCriteria, as: "criteria" },
+        { model: User, as: "createdBy", attributes: ["id", "email", "firstName", "lastName"] },
       ],
       order: [["createdAt", "DESC"]],
     });

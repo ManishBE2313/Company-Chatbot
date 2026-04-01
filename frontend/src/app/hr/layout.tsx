@@ -14,6 +14,7 @@ import {
   Power,
   ShieldCheck,
   Users,
+  Settings, 
 } from "lucide-react";
 import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 
@@ -29,6 +30,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: "My Interviews", href: "/hr/my-interviews", icon: <CalendarRange size={16} /> },
   { label: "Jobs", href: "/hr/jobs", icon: <Briefcase size={16} /> },
   { label: "Applications", href: "/hr/applications", icon: <Users size={16} /> },
+  {
+    label: "Company Settings", // <-- New Tab
+    href: "/hr/settings",
+    icon: <Settings size={16} />,
+    minRole: "admin", // Assuming HR/Admins are the ones reviewing jobs and assigning roles
+  },
   {
     label: "Admin Panel",
     href: "/hr/admin",
