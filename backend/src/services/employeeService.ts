@@ -12,6 +12,11 @@ import { sequelize } from "../config/database";
 
 
 export class EmployeeService {
+  private static sanitizeSection(data: Record<string, unknown>) {
+    return Object.fromEntries(
+      Object.entries(data).filter(([key]) => key !== "id" && key !== "employeeId" && key !== "createdAt" && key !== "updatedAt")
+    );
+  }
 
   //  CREATE FULL EMPLOYEE (TRANSACTION)
   public static async createEmployee(data: any) {
@@ -73,21 +78,32 @@ export class EmployeeService {
   //  GET SINGLE EMPLOYEE (FULL DETAILS)
   public static async getEmployeeByEmail(email: string) {
   console.log("reached service")
-  let employee = await Employee.findOne({
+  const employee = await Employee.findOne({
     where: { workEmail: email },
-    include: [
-      { model: EmployeeContact },
-      { model: EmployeePersonal },
-      { model: EmployeeWork },
-      { model: EmployeeEmergency },
-      { model: EmployeeEducation },
-    ],
   });
    if (!employee) {
     console.log("Employee not found");
     return null;
 }
-     return employee;
+
+  const employeeId = employee.id;
+  const [employeeContact, employeePersonal, employeeWork, employeeEmergency, employeeEducations] =
+    await Promise.all([
+      EmployeeContact.findOne({ where: { employeeId }, order: [["updatedAt", "DESC"]] }),
+      EmployeePersonal.findOne({ where: { employeeId }, order: [["updatedAt", "DESC"]] }),
+      EmployeeWork.findOne({ where: { employeeId }, order: [["updatedAt", "DESC"]] }),
+      EmployeeEmergency.findOne({ where: { employeeId }, order: [["updatedAt", "DESC"]] }),
+      EmployeeEducation.findAll({ where: { employeeId }, order: [["updatedAt", "DESC"]] }),
+    ]);
+
+     return {
+      ...employee.toJSON(),
+      employeeContact,
+      employeePersonal,
+      employeeWork,
+      employeeEmergency,
+      employeeEducations,
+     };
   }
 
 
@@ -107,36 +123,61 @@ export class EmployeeService {
     location: data.location,
   });
 
-  // 2. Contact
-  if (data.contact) {
-    await EmployeeContact.upsert({
-      ...data.contact,
+  const updateOrCreateRelated = async (model: any, values: Record<string, unknown>, label: string) => {
+    const sanitizedValues = EmployeeService.sanitizeSection(values);
+    const existingRows = await model.findAll({
+      where: { employeeId: id },
+      order: [["updatedAt", "DESC"]],
+    });
+    const [existing, ...duplicates] = existingRows;
+
+    console.log(`updating ${label}`, {
+      employeeId: id,
+      sanitizedValues,
+      foundExisting: Boolean(existing),
+      duplicateCount: duplicates.length,
+    });
+
+    if (duplicates.length) {
+      await model.destroy({
+        where: {
+          id: duplicates.map((row: any) => row.id),
+        },
+      });
+    }
+
+    if (existing) {
+      await existing.update(sanitizedValues);
+      console.log(`${label} updated`);
+      return existing;
+    }
+
+    const created = await model.create({
+      ...sanitizedValues,
       employeeId: id,
     });
+    console.log(`${label} created`);
+    return created;
+  };
+
+  // 2. Contact
+  if (data.contact) {
+    await updateOrCreateRelated(EmployeeContact, data.contact, "contact");
   }
 
   // 3. Personal
   if (data.personal) {
-    await EmployeePersonal.upsert({
-      ...data.personal,
-      employeeId: id,
-    });
+    await updateOrCreateRelated(EmployeePersonal, data.personal, "personal");
   }
 
   // 4. Work
   if (data.work) {
-    await EmployeeWork.upsert({
-      ...data.work,
-      employeeId: id,
-    });
+    await updateOrCreateRelated(EmployeeWork, data.work, "work");
   }
 
   // 5. Emergency
   if (data.emergency) {
-    await EmployeeEmergency.upsert({
-      ...data.emergency,
-      employeeId: id,
-    });
+    await updateOrCreateRelated(EmployeeEmergency, data.emergency, "emergency");
   }
 
   // 6. Education (array)

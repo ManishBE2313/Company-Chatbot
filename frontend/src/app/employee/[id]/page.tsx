@@ -12,6 +12,49 @@ import { AboutMe } from './components/Aboutme';
 import { WorkInfo } from './components/WorkInfo';
 import { getEmployeeDetails } from '@/services/apiClient';
 
+type EmployeeApiResponse = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  designation?: string;
+  band?: string;
+  location?: string;
+  workEmail?: string;
+  profileCompleted: boolean;
+  employeeContact?: {
+    personalEmail?: string;
+    phone?: string;
+    city?: string;
+    address?: string;
+  };
+  employeePersonal?: {
+    nationality?: string;
+    dob?: string;
+    bloodGroup?: string;
+    maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed';
+    aadhar?: string;
+    pan?: string;
+    uan?: string;
+    passport?: string;
+  };
+  employeeWork?: {
+    reportingManager?: string;
+    dateOfJoining?: string;
+    annualCompensation?: number;
+  };
+  employeeEmergency?: {
+    name?: string;
+    relation?: string;
+    phone?: string;
+  };
+  employeeEducations?: Array<{
+    id: string;
+    type?: string;
+    institute?: string;
+    year?: string;
+  }>;
+};
+
 export default function EmployeePage() {
   const params = useParams();
   const id = params.id as string;
@@ -21,41 +64,76 @@ export default function EmployeePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const mapEmployeeData = (data: any) => {
+  const mapEmployeeData = (data: EmployeeApiResponse): Employee => {
     return {
       id: data.id,
       firstName: data.firstName,
       lastName: data.lastName,
-      designation: data.designation,
-      band: data.band,
-      location: data.location,
-      workEmail: data.workEmail,
       profileCompleted: data.profileCompleted,
 
-      contactDetails: data.employeeContact || {},
-      aboutMe: data.employeePersonal || {},
+      contactDetails: {
+        email: data.workEmail || '',
+        personalEmail: data.employeeContact?.personalEmail || '',
+        phone: data.employeeContact?.phone || '',
+        address: data.employeeContact?.address || '',
+        city: data.employeeContact?.city || '',
+        state: '',
+        country: '',
+        zipCode: '',
+      },
+
+      aboutMe: {
+        nationality: data.employeePersonal?.nationality || '',
+        aadhar: data.employeePersonal?.aadhar || '',
+        pan: data.employeePersonal?.pan || '',
+        uan: data.employeePersonal?.uan || '',
+        passportNumber: data.employeePersonal?.passport || '',
+        dateOfBirth: data.employeePersonal?.dob || '',
+        bloodGroup: data.employeePersonal?.bloodGroup || '',
+        maritalStatus: data.employeePersonal?.maritalStatus || 'single',
+      },
 
       workInfo: data.employeeWork
         ? {
-            ...data.employeeWork,
-            designation: data.designation,
-            band: data.band,
-            location: data.location,
-            emergencyContact: data.employeeEmergency || {},
+            designation: data.designation || '',
+            band: data.band || '',
+            location: data.location || '',
+            employmentStatus: 'active',
+            employmentType: 'full-time',
+            employmentCountry: '',
+            dateOfJoining: data.employeeWork.dateOfJoining || '',
+            annualCompensation: data.employeeWork.annualCompensation || 0,
+            reportingManager: data.employeeWork.reportingManager || '',
+            emergencyContact: {
+              name: data.employeeEmergency?.name || '',
+              relationship: data.employeeEmergency?.relation || '',
+              phone: data.employeeEmergency?.phone || '',
+            },
           }
         : {
-            designation: data.designation,
-            band: data.band,
-            location: data.location,
-            employmentStatus: '',
-            employmentType: '',
-            dateOfJoining: null,
-            annualCompensation: null,
+            designation: data.designation || '',
+            band: data.band || '',
+            location: data.location || '',
+            employmentStatus: 'active',
+            employmentType: 'full-time',
+            employmentCountry: '',
+            dateOfJoining: '',
+            annualCompensation: 0,
             reportingManager: '',
-            emergencyContact: {},
+            emergencyContact: {
+              name: '',
+              relationship: '',
+              phone: '',
+            },
           },
 
-      educationInfo: data.employeeEducations || [],
+      educationInfo: (data.employeeEducations || []).map((edu) => ({
+        id: edu.id,
+        institution: edu.institute || '',
+        degree: edu.type || '',
+        field: '',
+        graduationYear: Number(edu.year) || 0,
+      })),
     };
   };
 
@@ -66,7 +144,7 @@ export default function EmployeePage() {
         const res = await getEmployeeDetails();
 
         if (res) {
-          const mapped = mapEmployeeData(res);
+          const mapped = mapEmployeeData(res as EmployeeApiResponse);
           setEmployee(mapped);
         } else {
           setError('Employee not found');
@@ -89,7 +167,7 @@ export default function EmployeePage() {
     if (employee && !employee.profileCompleted) {
       router.push(`/employeedetails/${userId}`);
     }
-  }, [employee, router]);
+  }, [employee, router, userId]);
 
   const handleContactUpdate = async () => {
     console.log('handlecontactupdate');
@@ -123,25 +201,25 @@ export default function EmployeePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Profile Header */}
+    <main className="py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <ProfileHeader employee={employee} />
         </div>
 
-        {/* Content Sections */}
-        <div className="space-y-6">
-          <EducationInfo education={employee.educationInfo} />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <div className="space-y-6">
+            <EducationInfo education={employee.educationInfo} />
+            <WorkInfo workInfo={employee.workInfo} />
+          </div>
 
-          <ContactDetails
-            contactDetails={employee.contactDetails}
-            onUpdate={handleContactUpdate}
-          />
-
-          <AboutMe aboutMe={employee.aboutMe} />
-
-          <WorkInfo workInfo={employee.workInfo} />
+          <div className="space-y-6">
+            <ContactDetails
+              contactDetails={employee.contactDetails}
+              onUpdate={handleContactUpdate}
+            />
+            <AboutMe aboutMe={employee.aboutMe} />
+          </div>
         </div>
       </div>
     </main>

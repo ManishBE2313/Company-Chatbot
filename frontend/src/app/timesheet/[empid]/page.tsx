@@ -18,7 +18,7 @@ interface DailyHours {
 }
 
 interface FormState {
-  empId: string;
+  employeeEmail: string;
   weekEnding: string;
   claimMonth: string;
   hours: DailyHours;
@@ -60,10 +60,11 @@ function calcStats(hours: DailyHours) {
 export default function Timesheet() {
 
   const params = useParams();
-  const empId = params?.empid as string || "EMP-001";
+  const rawEmployeeEmail = params?.empid as string || "employee@example.com";
+  const employeeEmail = decodeURIComponent(rawEmployeeEmail);
 
   const [form, setForm] = useState<FormState>({
-    empId,
+    employeeEmail,
     weekEnding: today(),
     claimMonth: month(),
     hours: emptyHours(),
@@ -73,7 +74,7 @@ export default function Timesheet() {
 
   const { total, avg } = calcStats(form.hours);
 
-  const setField = (key: keyof FormState, value: any) => {
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
@@ -92,7 +93,7 @@ export default function Timesheet() {
 
   const handleClear = () => {
     setForm({
-      empId,
+      employeeEmail,
       weekEnding: today(),
       claimMonth: month(),
       hours: emptyHours(),
@@ -165,7 +166,7 @@ export default function Timesheet() {
           color: "#3730a3",
           fontWeight: 500
         }}>
-          Employee ID: {empId}
+          Employee Email: {employeeEmail}
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -240,7 +241,7 @@ export default function Timesheet() {
             <select
               style={input}
               value={form.status}
-              onChange={(e) => setField("status", e.target.value)}
+              onChange={(e) => setField("status", e.target.value as Status)}
             >
               <option value="">Select status</option>
               <option value="pending">Pending</option>

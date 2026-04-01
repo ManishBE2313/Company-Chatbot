@@ -104,6 +104,10 @@ export class EmployeeController {
   ) {
     try {
         const id = req.params.id as string;
+      console.log("employee update request", {
+        id,
+        body: req.body,
+      });
       const updated = await EmployeeService.updateEmployee(
         id,
         req.body
