@@ -1,7 +1,7 @@
-import { Transaction, WhereOptions, fn, col } from "sequelize";
+﻿import { Transaction, WhereOptions, fn, col } from "sequelize";
 import { JobAttributes } from "../../models/job";
 import { JobCriteriaAttributes } from "../../models/jobCriteria";
-import { Job, JobCriteria } from "../config/database";
+import { Department, InterviewPanel, InterviewPanelMember, Job, JobCriteria, JobRole, Location, User } from "../config/database";
 
 interface JobStatusCountRow {
   status: JobAttributes["status"];
@@ -40,7 +40,14 @@ export class JobRepository {
   }
 
   public static async findJobById(jobId: string): Promise<any> {
-    return Job.findByPk(jobId);
+    return Job.findByPk(jobId, {
+      include: [
+        { model: JobCriteria, as: "criteria" },
+        { model: JobRole, as: "jobRole" },
+        { model: Location, as: "locationRef" },
+        { model: InterviewPanel, as: "panel" },
+      ],
+    });
   }
 
   public static async updateJob(jobId: string, updateData: Partial<JobAttributes>) {
@@ -51,15 +58,29 @@ export class JobRepository {
     return affectedCount;
   }
 
-  public static async findJobsForHR(status?: JobAttributes["status"]): Promise<any> {
+  public static async findJobsForHR(
+    status?: JobAttributes["status"],
+    reviewStatus?: JobAttributes["reviewStatus"]
+  ): Promise<any> {
     const where: WhereOptions<JobAttributes> = {};
 
     if (status) {
       where.status = status;
     }
 
+    if (reviewStatus) {
+      where.reviewStatus = reviewStatus;
+    }
+
     return Job.findAndCountAll({
       where,
+      include: [
+        { model: JobRole, as: "jobRole" },
+        { model: Location, as: "locationRef" },
+        { model: InterviewPanel, as: "panel" },
+        { model: JobCriteria, as: "criteria" },
+        { model: User, as: "createdBy", attributes: ["id", "email", "firstName", "lastName"] },
+      ],
       order: [["createdAt", "DESC"]],
     });
   }
@@ -83,5 +104,29 @@ export class JobRepository {
     }
 
     return counts;
+  }
+
+  public static async findDepartmentById(id: string) {
+    return Department.findByPk(id);
+  }
+
+  public static async findLocationById(id: string) {
+    return Location.findByPk(id);
+  }
+
+  public static async findJobRoleById(id: string) {
+    return JobRole.findByPk(id);
+  }
+
+  public static async findPanelById(id: string) {
+    return InterviewPanel.findByPk(id, {
+      include: [
+        {
+          model: InterviewPanelMember,
+          as: "members",
+          include: [{ model: User, as: "employee", attributes: ["id", "email"] }],
+        },
+      ],
+    });
   }
 }

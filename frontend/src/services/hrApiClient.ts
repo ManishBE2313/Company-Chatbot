@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 import {
   Job,
   CreateJobPayload,
@@ -12,6 +12,9 @@ import {
   InterviewSlot,
   CreateScorecardPayload,
   PipelineStageConfig,
+  JobFormCatalog,
+  EmployeeListItem,
+  RoleOption,
 } from "@/types/hr";
 
 const fastApiClient = axios.create({
@@ -59,6 +62,15 @@ export async function getHRCurrentUser(): Promise<HRUser> {
   }
 }
 
+export async function getJobFormCatalog(): Promise<JobFormCatalog> {
+  try {
+    const response = await nextApiClient.get<{ data: JobFormCatalog }>("/api/hr/catalog/job-form");
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch job form catalog."));
+  }
+}
+
 export async function getJobs(): Promise<Job[]> {
   try {
     const response = await nextApiClient.get<{ data: Job[] }>("/api/hr/jobs");
@@ -77,9 +89,13 @@ export async function getJobById(jobId: string): Promise<Job> {
   }
 }
 
-export async function createJob(payload: CreateJobPayload): Promise<Job> {
+export async function createJob(payload: CreateJobPayload, userEmail?: string): Promise<Job> {
   try {
-    const response = await nextApiClient.post<{ data: Job }>("/api/jobs/setup", payload);
+    const response = await nextApiClient.post<{ data: Job }>(
+      "/api/jobs/setup",
+      payload,
+      userEmail ? withUserEmail(userEmail) : undefined
+    );
     return response.data.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to create job."));
@@ -250,5 +266,45 @@ export async function updateJobPipeline(
     return response.data.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to update pipeline config."));
+  }
+}
+
+export async function getEmployeesForRoleManagement(userEmail: string): Promise<EmployeeListItem[]> {
+  try {
+    const response = await nextApiClient.get<{ data: EmployeeListItem[] }>(
+      "/api/hr/user/employees",
+      withUserEmail(userEmail)
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch employees."));
+  }
+}
+
+export async function getAssignableRoles(userEmail: string): Promise<RoleOption[]> {
+  try {
+    const response = await nextApiClient.get<{ data: RoleOption[] }>(
+      "/api/hr/user/roles",
+      withUserEmail(userEmail)
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch roles."));
+  }
+}
+
+export async function updateEmployeeRoles(
+  userEmail: string,
+  employeeId: string,
+  roles: string[]
+): Promise<void> {
+  try {
+    await nextApiClient.put(
+      `/api/hr/user/${employeeId}/roles`,
+      { roles },
+      withUserEmail(userEmail)
+    );
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update employee roles."));
   }
 }

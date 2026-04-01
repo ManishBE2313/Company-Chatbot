@@ -13,6 +13,8 @@ import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 import { Application, ApplicationStatus } from "@/types/hr";
 import { ArrowLeft, MapPin, Settings2, Upload, Users, Briefcase, Inbox } from "lucide-react";
 import Link from "next/link";
+import SharepointSyncModal from "../../../../components/hr/SharepointSyncModal";
+import { useState } from "react"; 
 
 interface Tab {
   label: string;
@@ -46,6 +48,7 @@ export default function JobApplicationsPage() {
   const [selectedApp, setSelectedApp] = React.useState<Application | null>(null);
   const [showUploadCV, setShowUploadCV] = React.useState(false);
   const [showPipelineConfig, setShowPipelineConfig] = React.useState(false);
+ const [isSharepointModalOpen, setIsSharepointModalOpen] = useState(false);
 
   const handleStatCardClick = (status: ApplicationStatus | undefined) => {
     setActiveTab(status);
@@ -88,6 +91,14 @@ export default function JobApplicationsPage() {
                 <Button size="sm" className="gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700" onClick={() => setShowUploadCV(true)}>
                   <Upload size={13} />
                   Upload CV
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700" 
+                  onClick={() => setIsSharepointModalOpen(true)}
+                >
+                  <Upload size={13} /> {/* Or use a different icon like FolderSync */}
+                  Bulk Import
                 </Button>
               </div>
             )}
@@ -187,6 +198,11 @@ export default function JobApplicationsPage() {
         }}
         isLoading={isSavingPipeline}
         error={pipelineError}
+      />
+      <SharepointSyncModal 
+        jobId={jobId as string}
+        isOpen={isSharepointModalOpen}
+        onClose={() => setIsSharepointModalOpen(false)}
       />
     </div>
   );

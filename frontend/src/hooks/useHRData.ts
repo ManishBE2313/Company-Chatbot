@@ -32,8 +32,16 @@ import {
 import { fetchCurrentHRUser, fetchHRJobs } from "@/lib/redux/features/hr/HRSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/redux";
 
+export interface InterviewerOption {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
 export function useHRCurrentUser() {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
   const user = useAppSelector((state) => state.hr.currentUser);
   const status = useAppSelector((state) => state.hr.currentUserStatus);
   const error = useAppSelector((state) => state.hr.currentUserError);
@@ -58,6 +66,7 @@ export function useHRCurrentUser() {
 
 export function useJobs() {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
   const jobs = useAppSelector((state) => state.hr.jobs);
   const status = useAppSelector((state) => state.hr.jobsStatus);
   const error = useAppSelector((state) => state.hr.jobsError);
@@ -160,12 +169,13 @@ export function useCreateJob(onSuccess?: (job: Job) => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
 
   const submit = useCallback(async (payload: CreateJobPayload) => {
     setIsLoading(true);
     setError(null);
     try {
-      const job = await createJob(payload);
+      const job = await createJob(payload, currentUser?.email);
       onSuccess?.(job);
       void dispatch(fetchHRJobs());
     } catch (e: any) {
@@ -173,7 +183,7 @@ export function useCreateJob(onSuccess?: (job: Job) => void) {
     } finally {
       setIsLoading(false);
     }
-  }, [dispatch, onSuccess]);
+  }, [currentUser?.email, dispatch, onSuccess]);
 
   return { submit, isLoading, error };
 }
@@ -366,4 +376,30 @@ export function useUpdateJobPipeline(onSuccess?: (job: Job) => void) {
   }, [onSuccess]);
 
   return { submit, isLoading, error };
+}
+export function useInterviewers() {
+  const [interviewers, setInterviewers] = useState<InterviewerOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    // FIX: Change this to match the Next.js API route, NOT the backend route!
+    fetch("/api/hr/interviewers") 
+      .then((res) => {
+        console.log("Response Status:", res.status); 
+        return res.json();
+      })
+      .then((response) => {
+        console.log("Raw Backend Data:", response); 
+        setInterviewers(response.data || []);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch interviewers", err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  return { interviewers, isLoading };
 }

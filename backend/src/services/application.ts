@@ -5,6 +5,8 @@ import { JobApplicationAttributes } from "../../models/jobApplication";
 import { ScorecardRepository } from "../repositories/ScorecardRepository";
 import { InterviewRepository } from "../repositories/InterviewRepository";
 import { UserRepository } from "../repositories/user";
+import { Op } from "sequelize";
+import { JobApplication, Job, Interview } from "../config/database";
 
 export class ApplicationService {
   public static async listAllApplications(filters: {
@@ -67,6 +69,8 @@ export class ApplicationService {
     status: JobApplicationAttributes["status"]
   ) {
     const application = await this.getApplicationById(applicationId);
+    
+    // 1. Update the specific candidate's status
     const affectedCount = await ApplicationRepository.updateApplicationStatus(applicationId, status);
 
     if (!affectedCount) {
@@ -74,6 +78,71 @@ export class ApplicationService {
     }
 
     application.status = status;
+
+    // --- SMART LOGIC: Auto-Close Job & Clean Pipeline on "OFFERED" ---
+    if (status === "OFFERED") {
+      const jobId = application.jobId;
+      const job = application.job;
+
+      // Count how many people currently have an "OFFERED" status for this specific job
+      const offeredCount = await JobApplication.count({
+        where: {
+          jobId: jobId,
+          status: "OFFERED",
+        },
+      });
+
+      // If the number of offers meets or exceeds the job's headcount
+      if (job && offeredCount >= job.headcount) {
+        
+        // A. Close the Job
+        await Job.update({ status: "Closed" }, { where: { id: jobId } });
+
+        // B. Mass-Reject everyone else who is still in the active pipeline
+        await JobApplication.update(
+          { status: "REJECTED" },
+          {
+            where: {
+              jobId: jobId,
+              status: {
+                [Op.notIn]: ["OFFERED", "REJECTED", "WITHDRAWN"], // Ignore people who are already finished
+              },
+            },
+          }
+        );
+
+        // C. Cancel all upcoming scheduled interviews for the rejected candidates
+        // C. Cancel all upcoming scheduled interviews for the rejected candidates
+        // Step 1: Get the IDs of the applications we just rejected
+        const rejectedApps = await JobApplication.findAll({
+          attributes: ["id"],
+          where: {
+            jobId: jobId,
+            status: "REJECTED",
+          },
+        });
+
+        const rejectedAppIds = rejectedApps.map((app: any) => app.id);
+
+        // Step 2: Cancel any scheduled interviews tied to those application IDs
+        if (rejectedAppIds.length > 0) {
+          await Interview.update(
+            { status: "CANCELED" },
+            {
+              where: {
+                status: "SCHEDULED",
+                applicationId: {
+                  [Op.in]: rejectedAppIds,
+                },
+              },
+            }
+          );
+        }
+
+        console.log(`[System] Job ${jobId} reached headcount of ${job.headcount}. Job closed and remaining candidates rejected/interviews canceled.`);
+      }
+    }
+
     return application;
   }
 

@@ -1,4 +1,5 @@
-import { sequelize } from "../config/database";
+﻿import { sequelize } from "../config/database";
+import { seedInitialData } from "./seedInitialData";
 
 async function autoSyncDatabase() {
   try {
@@ -8,6 +9,7 @@ async function autoSyncDatabase() {
 
     console.log("Starting Auto-Sync...");
     await sequelize.sync({ force: false, alter: true });
+    await seedInitialData();
 
     console.log("Database synchronized successfully! All new models and changes applied.");
     process.exit(0);

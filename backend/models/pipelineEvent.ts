@@ -1,8 +1,10 @@
-"use strict";
+﻿"use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
 export interface PipelineEventAttributes {
   id: string;
+  organizationId: string;
   applicationId: string;
   triggeredById?: string | null;
   eventType: string;
@@ -27,6 +29,16 @@ export default function PipelineEventModel(
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      organizationId: {
+        type: DataTypes.UUID,
+        field: "organization_id",
+        allowNull: false,
+        defaultValue: DEFAULT_ORGANIZATION_ID,
+        references: {
+          model: "organizations",
+          key: "id",
+        },
+      },
       applicationId: {
         type: DataTypes.UUID,
         field: "application_id",
@@ -41,7 +53,7 @@ export default function PipelineEventModel(
         field: "triggered_by_id",
         allowNull: true,
         references: {
-          model: "users",
+          model: "employees",
           key: "id",
         },
       },
@@ -76,11 +88,11 @@ export default function PipelineEventModel(
   };
 
   PipelineEvent.associate = (models: any) => {
+    PipelineEvent.belongsTo(models.organization, { foreignKey: "organizationId", as: "organization" });
     PipelineEvent.belongsTo(models.jobApplication, {
       foreignKey: "applicationId",
       as: "application",
     });
-
     PipelineEvent.belongsTo(models.user, {
       foreignKey: "triggeredById",
       as: "triggeredBy",

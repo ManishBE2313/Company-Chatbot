@@ -1,4 +1,14 @@
-import { Sequelize } from "sequelize";
+﻿import { Sequelize } from "sequelize";
+import OrganizationModel from "../../models/organization";
+import DepartmentModel from "../../models/department";
+import LocationModel from "../../models/location";
+import AccessRoleModel from "../../models/accessRole";
+import EmployeeRoleModel from "../../models/employeeRole";
+import SkillModel from "../../models/skill";
+import JobRoleModel from "../../models/jobRole";
+import JobRoleSkillModel from "../../models/jobRoleSkill";
+import InterviewPanelModel from "../../models/interviewPanel";
+import InterviewPanelMemberModel from "../../models/interviewPanelMember";
 import CandidateModel from "../../models/candidate";
 import JobApplicationModel from "../../models/jobApplication";
 import JobCriteriaModel from "../../models/jobCriteria";
@@ -40,6 +50,16 @@ export const sequelize = new Sequelize(
   }
 );
 
+export const Organization = OrganizationModel(sequelize);
+export const Department = DepartmentModel(sequelize);
+export const Location = LocationModel(sequelize);
+export const AccessRole = AccessRoleModel(sequelize);
+export const EmployeeRole = EmployeeRoleModel(sequelize);
+export const Skill = SkillModel(sequelize);
+export const JobRole = JobRoleModel(sequelize);
+export const JobRoleSkill = JobRoleSkillModel(sequelize);
+export const InterviewPanel = InterviewPanelModel(sequelize);
+export const InterviewPanelMember = InterviewPanelMemberModel(sequelize);
 export const Candidate = CandidateModel(sequelize);
 export const Job = JobModel(sequelize);
 export const JobCriteria = JobCriteriaModel(sequelize);
@@ -49,7 +69,6 @@ export const InterviewSlot = InterviewSlotModel(sequelize);
 export const Interview = InterviewModel(sequelize);
 export const Scorecard = ScorecardModel(sequelize);
 export const PipelineEvent = PipelineEventModel(sequelize);
-
 export const Employee = EmployeeModel(sequelize);
 export const EmployeeContact = EmployeeContactModel(sequelize);
 export const EmployeePersonal = EmployeePersonalModel(sequelize);
@@ -58,9 +77,17 @@ export const EmployeeEmergency = EmployeeEmergencyModel(sequelize);
 export const EmployeeEducation = EmployeeEducationModel(sequelize);
 export const Timesheet = TimesheetModel(sequelize);
 export const TimesheetEntry = TimesheetEntryModel(sequelize);
-
-// 1. Define the models object FIRST
 const models = {
+  organization: Organization,
+  department: Department,
+  location: Location,
+  accessRole: AccessRole,
+  employeeRole: EmployeeRole,
+  skill: Skill,
+  jobRole: JobRole,
+  jobRoleSkill: JobRoleSkill,
+  interviewPanel: InterviewPanel,
+  interviewPanelMember: InterviewPanelMember,
   candidate: Candidate,
   job: Job,
   jobCriteria: JobCriteria,
@@ -79,14 +106,11 @@ const models = {
   timesheet: Timesheet,
   timesheetEntry: TimesheetEntry,
 };
-
-// 2. Pass the ENTIRE `models` object to every associate function
-
-Object.values(models).forEach((model: any) => {
-  if (model.associate) {
+for (const model of Object.values(models) as Array<any>) {
+  if (typeof model.associate === "function") {
     model.associate(models);
   }
-});
+}
 
 export const getTransaction = () => sequelize.transaction();
 

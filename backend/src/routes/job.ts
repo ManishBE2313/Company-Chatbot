@@ -2,6 +2,7 @@ import { Router } from "express";
 import { JobController } from "../controllers/job";
 import { auth } from "../middlewares/auth";
 import { apiRateLimiter } from "../middlewares/rateLimiter";
+import { createDraftJob } from "../controllers/draftJob";
 
 const router = Router();
 
@@ -13,5 +14,5 @@ router.post(
   auth,
   JobController.createJob
 );
-
+router.post("/draft", auth, createDraftJob);
 export default router;

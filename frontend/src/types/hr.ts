@@ -1,4 +1,73 @@
-export type JobStatus = "Open" | "Closed" | "Draft" | "Paused";
+﻿export type JobStatus = "Open" | "Closed" | "Draft" | "Paused";
+export type UserRole = "user" | "interviewer" | "admin" | "superadmin";
+
+export interface DepartmentCatalog {
+  id: string;
+  name: string;
+  costCenterCode?: string | null;
+}
+
+export interface LocationCatalog {
+  id: string;
+  name: string;
+  country: string;
+  city: string;
+}
+
+export interface SkillCatalog {
+  id: string;
+  name: string;
+  category: string;
+  isActive?: boolean;
+}
+
+export interface JobRoleSkillCatalog {
+  id: string;
+  skillId: string;
+  weight?: number | null;
+  isMandatory: boolean;
+  skill?: SkillCatalog;
+}
+
+export interface JobRoleCatalog {
+  id: string;
+  title: string;
+  jobFamily?: string | null;
+  level?: string | null;
+  defaultExperienceMin?: number | null;
+  defaultExperienceMax?: number | null;
+  description?: string | null;
+  roleSkills?: JobRoleSkillCatalog[];
+}
+
+export interface InterviewerSummary {
+  id: string;
+  firstName: string;
+  lastName?: string | null;
+  email: string;
+  role: UserRole;
+}
+
+export interface InterviewPanelMemberCatalog {
+  id: string;
+  userId: string;
+  roleInPanel?: string | null;
+  employee?: InterviewerSummary;
+}
+
+export interface InterviewPanelCatalog {
+  id: string;
+  name: string;
+  members?: InterviewPanelMemberCatalog[];
+}
+
+export interface JobFormCatalog {
+  departments: DepartmentCatalog[];
+  locations: LocationCatalog[];
+  skills: SkillCatalog[];
+  jobRoles: JobRoleCatalog[];
+  panels: InterviewPanelCatalog[];
+}
 
 export interface PipelineStageConfig {
   id?: string;
@@ -11,27 +80,62 @@ export interface Job {
   id: string;
   title: string;
   department: string;
+  departmentId?: string | null;
   location: string;
+  locationId?: string | null;
+  jobRoleId?: string | null;
+  panelId?: string | null;
   headcount: number;
   status: JobStatus;
+  employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN" | null;
+  workModel?: "ON_SITE" | "REMOTE" | "HYBRID" | null;
+  seniorityLevel?: string | null;
+  experienceMin?: number | null;
+  experienceMax?: number | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  currency?: string | null;
+  payFrequency?: "HOURLY" | "WEEKLY" | "MONTHLY" | "YEARLY" | null;
+  salaryVisibility?: "PUBLIC" | "INTERNAL" | "HIDDEN" | null;
+  reviewStatus?: "approved" | "needs_review" | "blocked";
   pipelineConfig?: PipelineStageConfig[] | null;
+  jobRole?: JobRoleCatalog | null;
+  locationRef?: LocationCatalog | null;
+  panel?: InterviewPanelCatalog | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateJobPayload {
-  title: string;
-  department: string;
-  location: string;
+  title?: string;
+  jobRoleId?: string;
+  department?: string;
+  departmentId?: string;
+  location?: string;
+  locationId?: string;
+  panelId?: string;
   headcount: number;
+  employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN";
+  workModel?: "ON_SITE" | "REMOTE" | "HYBRID";
+  seniorityLevel?: string;
+  experienceMin?: number;
+  experienceMax?: number;
+  salaryMin?: number;
+  salaryMax?: number;
+  currency?: string;
+  payFrequency?: "HOURLY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+  salaryVisibility?: "PUBLIC" | "INTERNAL" | "HIDDEN";
   requirements: JobRequirements;
 }
 
 export interface JobRequirements {
   mustHaveSkills: string[];
   niceToHaveSkills: string[];
-  minYearsExperience: number;
-  educationLevel: string;
+  mustHaveSkillIds?: string[];
+  niceToHaveSkillIds?: string[];
+  minYearsExperience?: number;
+  maxYearsExperience?: number;
+  educationLevel?: string;
   notes?: string;
 }
 
@@ -60,14 +164,6 @@ export interface InterviewSlot {
   endTime: string;
   isBooked: boolean;
   interview?: Interview | null;
-}
-
-export interface InterviewerSummary {
-  id: string;
-  firstName: string;
-  lastName?: string | null;
-  email: string;
-  role: UserRole;
 }
 
 export interface Scorecard {
@@ -151,8 +247,6 @@ export interface PipelineStats {
   withdrawn: number;
 }
 
-export type UserRole = "user" | "interviewer" | "admin" | "superadmin";
-
 export interface HRUser {
   id?: string;
   firstName?: string;
@@ -160,4 +254,21 @@ export interface HRUser {
   email: string;
   role: UserRole;
   is_sso: boolean;
+}
+
+export interface EmployeeListItem {
+  id: string;
+  firstName: string;
+  lastName?: string | null;
+  email: string;
+  role: UserRole;
+  status: string;
+  department?: { id: string; name: string } | null;
+  roles: string[];
+}
+
+export interface RoleOption {
+  id: string;
+  name: string;
+  description?: string | null;
 }

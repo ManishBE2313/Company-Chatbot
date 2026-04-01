@@ -16,6 +16,8 @@ from api.dependencies import get_current_user
 from api.candidate_intake import router as candidate_intake_router
 from api.hr_jobs import router as hr_jobs_router
 from api.job_setup import router as job_setup_router
+from api.batch_intake import router as batch_intake_router
+from api.job_evaluate import router as job_evaluate_router
 
 app = FastAPI(
     title="Knowledge AI API",
@@ -27,6 +29,8 @@ app.include_router(auth_router)
 app.include_router(candidate_intake_router)
 app.include_router(hr_jobs_router)
 app.include_router(job_setup_router)
+app.include_router(batch_intake_router)
+app.include_router(job_evaluate_router)
 
 @app.get("/", include_in_schema=False)
 def read_root():

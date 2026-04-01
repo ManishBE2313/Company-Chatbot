@@ -48,4 +48,22 @@ export class NotificationController {
       next(error);
     }
   }
+  // NEW: SharePoint Grant Request
+  public static async sendSharepointGrantRequest(req: any, res: Response, next: NextFunction) {
+    try {
+      const { email, folderUrl, clientId, encodedUrl } = req.body;
+
+      if (!email || !folderUrl || !clientId || !encodedUrl) {
+        return res.status(400).json({ message: "Missing required fields: email, folderUrl, clientId, encodedUrl" });
+      }
+
+      await NotificationService.sendSharepointGrantRequest(email, folderUrl, clientId, encodedUrl);
+
+      res.status(200).json({
+        message: "SharePoint grant request email sent successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

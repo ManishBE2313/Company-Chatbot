@@ -22,3 +22,12 @@ export async function PATCH(
   const { slug } = await context.params;
   return proxyToBackend(request, buildTargetPath(request, slug), "PATCH");
 }
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ slug?: string[] }> }
+)
+{
+  const { slug } = await context.params;
+  // Proxy the POST request to the backend
+  return proxyToBackend(request, buildTargetPath(request, slug), "POST");
+}
