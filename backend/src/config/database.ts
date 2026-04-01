@@ -15,6 +15,8 @@ import EmployeePersonalModel from "../../models/employeePersonal";
 import EmployeeWorkModel from "../../models/employeeWork";
 import EmployeeEmergencyModel from "../../models/employeeEmergency";
 import EmployeeEducationModel from "../../models/employeeEducation";
+import TimesheetModel from "../../models/timesheet";
+import TimesheetEntryModel from "../../models/timesheetEntry";
 
 const isProduction = runtimeConfig.nodeEnv.toLowerCase() === "production";
 
@@ -54,6 +56,8 @@ export const EmployeePersonal = EmployeePersonalModel(sequelize);
 export const EmployeeWork = EmployeeWorkModel(sequelize);
 export const EmployeeEmergency = EmployeeEmergencyModel(sequelize);
 export const EmployeeEducation = EmployeeEducationModel(sequelize);
+export const Timesheet = TimesheetModel(sequelize);
+export const TimesheetEntry = TimesheetEntryModel(sequelize);
 
 // 1. Define the models object FIRST
 const models = {
@@ -72,6 +76,8 @@ const models = {
   employeeWork: EmployeeWork,
   employeeEmergency: EmployeeEmergency,
   employeeEducation: EmployeeEducation,
+  timesheet: Timesheet,
+  timesheetEntry: TimesheetEntry,
 };
 
 // 2. Pass the ENTIRE `models` object to every associate function

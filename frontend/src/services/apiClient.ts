@@ -121,3 +121,37 @@ export async function logoutUser(): Promise<void> {
     throw new Error(errorData?.detail || `Server error: ${response.status}`);
   }
 }
+
+export interface TimesheetPayload {
+  employeeEmail: string;
+  weekEnding: string;
+  claimMonth: string;
+  hours: {
+    day1: string;
+    day2: string;
+    day3: string;
+    day4: string;
+    day5: string;
+    day6: string;
+    day7: string;
+  };
+  status: string;
+  remarks: string;
+}
+
+export async function submitTimesheet(empId: string, payload: TimesheetPayload) {
+  const response = await fetch(`${API_BASE_URL2}/api/employee/${encodeURIComponent(empId)}/timesheet`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Server error: ${response.status}`);
+  }
+
+  return response.json();
+}

@@ -2,6 +2,7 @@
 'use client'
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
+import { submitTimesheet, TimesheetPayload } from "@/services/apiClient";
 
 // ── Types ─────────────────────────────
 
@@ -85,10 +86,25 @@ export default function Timesheet() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(form);
-    alert("Submitted!");
+
+    const payload: TimesheetPayload = {
+      employeeEmail: form.employeeEmail,
+      weekEnding: form.weekEnding,
+      claimMonth: form.claimMonth,
+      hours: form.hours,
+      status: form.status,
+      remarks: form.remarks,
+    };
+
+    try {
+      await submitTimesheet(employeeEmail, payload);
+      alert("Timesheet submitted successfully.");
+    } catch (error) {
+      console.error("Timesheet submit failed", error);
+      alert("Failed to submit timesheet. Please try again.");
+    }
   };
 
   const handleClear = () => {

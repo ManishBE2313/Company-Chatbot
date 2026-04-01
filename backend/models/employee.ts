@@ -77,6 +77,7 @@ export default function EmployeeModel(
     Employee.hasOne(models.employeeWork, { foreignKey: "employeeId" });
     Employee.hasOne(models.employeeEmergency, { foreignKey: "employeeId" });
     Employee.hasMany(models.employeeEducation, { foreignKey: "employeeId" });
+    Employee.hasMany(models.timesheet, { foreignKey: "employeeId", as: "timesheets" });
   };
 
   return Employee;
