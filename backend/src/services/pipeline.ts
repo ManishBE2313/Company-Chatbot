@@ -28,6 +28,7 @@ export class PipelineService {
       transaction = await getTransaction();
 
       const application = await CandidateRepository.findJobApplicationById(applicationId, transaction);
+     
       if (!application) {
         throw new Errors.BadRequestError("Job application not found.");
       }
@@ -61,6 +62,7 @@ export class PipelineService {
           fromStatus,
           toStatus,
           notes: notes || null,
+          organizationId: application.organizationId,
         },
         { transaction }
       );
