@@ -50,9 +50,27 @@ export class JobRepository {
     });
   }
 
-  public static async updateJob(jobId: string, updateData: Partial<JobAttributes>) {
+  public static async updateJob(
+    jobId: string,
+    updateData: Partial<JobAttributes>,
+    transaction?: Transaction
+  ) {
     const [affectedCount] = await Job.update(updateData, {
       where: { id: jobId },
+      transaction,
+    });
+
+    return affectedCount;
+  }
+
+  public static async updateJobCriteriaByJobId(
+    jobId: string,
+    updateData: Partial<JobCriteriaAttributes>,
+    transaction: Transaction
+  ) {
+    const [affectedCount] = await JobCriteria.update(updateData, {
+      where: { jobId },
+      transaction,
     });
 
     return affectedCount;

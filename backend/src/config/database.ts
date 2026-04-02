@@ -5,6 +5,7 @@ import LocationModel from "../../models/location";
 import AccessRoleModel from "../../models/accessRole";
 import EmployeeRoleModel from "../../models/employeeRole";
 import SkillModel from "../../models/skill";
+import JobDescriptionTemplateModel from "../../models/jobDescriptionTemplate";
 import JobRoleModel from "../../models/jobRole";
 import JobRoleSkillModel from "../../models/jobRoleSkill";
 import InterviewPanelModel from "../../models/interviewPanel";
@@ -48,6 +49,7 @@ export const Location = LocationModel(sequelize);
 export const AccessRole = AccessRoleModel(sequelize);
 export const EmployeeRole = EmployeeRoleModel(sequelize);
 export const Skill = SkillModel(sequelize);
+export const JobDescriptionTemplate = JobDescriptionTemplateModel(sequelize);
 export const JobRole = JobRoleModel(sequelize);
 export const JobRoleSkill = JobRoleSkillModel(sequelize);
 export const InterviewPanel = InterviewPanelModel(sequelize);
@@ -70,6 +72,7 @@ const models = {
   accessRole: AccessRole,
   employeeRole: EmployeeRole,
   skill: Skill,
+  jobDescriptionTemplate: JobDescriptionTemplate,
   jobRole: JobRole,
   jobRoleSkill: JobRoleSkill,
   interviewPanel: InterviewPanel,

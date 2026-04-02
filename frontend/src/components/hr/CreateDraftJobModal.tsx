@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 import { X, Sparkles } from "lucide-react";
 import { showToast } from "@/components/ui/Toast";
+import { SearchableDropdown } from "@/components/ui/SearchableDropdown";
 
 // AI Feedback interface
 interface AIFeedback {
@@ -24,7 +25,7 @@ interface CreateDraftJobModalProps {
 
 export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: CreateDraftJobModalProps) {
   const { user } = useHRCurrentUser();
-  // --- Form State (Exactly like CreateJobModal) ---
+  // --- Form State ---
   const [catalog, setCatalog] = React.useState<JobFormCatalog | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = React.useState(true);
   const [catalogError, setCatalogError] = React.useState<string | null>(null);
@@ -111,16 +112,16 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!catalog || !selectedJobRole || !selectedDepartment || !selectedLocation) return;
+    // Removed !selectedDepartment from strict validation since it is hidden/optional now
+    if (!catalog || !selectedJobRole || !selectedLocation) return;
 
     setIsSubmitting(true);
 
-    // Build the full payload, matching the structure of CreateJobPayload
     const payload = {
       title: selectedJobRole.title,
       jobRoleId: selectedJobRole.id,
-      department: selectedDepartment.name,
-      departmentId: selectedDepartment.id,
+      department: selectedDepartment?.name || "Unassigned", // Safely handle missing department
+      departmentId: selectedDepartment?.id || undefined,
       location: selectedLocation.name,
       locationId: selectedLocation.id,
       panelId: panelId || undefined,
@@ -128,7 +129,7 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
       employmentType,
       workModel,
       seniorityLevel,
-      level: seniorityLevel, // Sent explicitly for the AI prompt
+      level: seniorityLevel,
       experienceMin,
       experienceMax,
       salaryMin: salaryMin === "" ? undefined : salaryMin,
@@ -161,8 +162,8 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
       const data = await response.json();
 
       if (response.ok) {
-        if (data.job?.reviewStatus === "approved") {
-          setResult({ status: "approved" });
+        if (data.job?.reviewStatus === "approved" || data.message?.includes("approved")) {
+          setResult({ status: "approved", feedback: data.aiFeedback });
           showToast({
             type: "success",
             mainText: "Job Approved!",
@@ -177,7 +178,6 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
           });
         }
       } else {
-        // Show API error message in the toast
         showToast({
           type: "error",
           mainText: "Failed to create job",
@@ -194,7 +194,7 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   const handleFinish = () => {
     setResult(null);
@@ -241,12 +241,16 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
                               {catalog?.jobRoles.map((role) => <option key={role.id} value={role.id}>{role.title}</option>)}
                             </select>
                           </Field>
+                          
+                          {/* COMMENTED OUT DEPARTMENT
                           <Field label="Department" required>
                             <select className={inputCls} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} required>
                               <option value="">Select department</option>
                               {catalog?.departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
                             </select>
                           </Field>
+                          */}
+
                           <Field label="Location" required>
                             <select className={inputCls} value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
                               <option value="">Select location</option>
@@ -350,25 +354,28 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
                       </div>
                     </div>
 
-                    <div className="grid gap-5 lg:grid-cols-2">
-                      <SkillBucket
-                        title="Must-Have Skills"
-                        selectedSkillIds={mustHaveSkillIds}
-                        availableSkills={availableMustSkills}
-                        getSkillName={getSkillName}
-                        onAdd={(skillId) => moveSkill(skillId, "must")}
-                        onRemove={(skillId) => removeSkill(skillId, "must")}
-                      />
-                      <SkillBucket
-                        title="Nice-To-Have Skills"
-                        selectedSkillIds={niceToHaveSkillIds}
-                        availableSkills={availableNiceSkills}
-                        getSkillName={getSkillName}
-                        onAdd={(skillId) => moveSkill(skillId, "nice")}
-                        onRemove={(skillId) => removeSkill(skillId, "nice")}
-                      />
+                   <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div className="grid gap-8 lg:grid-cols-2">
+                        <SkillBucket
+                          title="MUST HAVE"
+                          type="must"
+                          selectedSkillIds={mustHaveSkillIds}
+                          availableSkills={availableMustSkills}
+                          getSkillName={getSkillName}
+                          onAdd={(skillId) => moveSkill(skillId, "must")}
+                          onRemove={(skillId) => removeSkill(skillId, "must")}
+                        />
+                        <SkillBucket
+                          title="NICE TO HAVE"
+                          type="nice"
+                          selectedSkillIds={niceToHaveSkillIds}
+                          availableSkills={availableNiceSkills}
+                          getSkillName={getSkillName}
+                          onAdd={(skillId) => moveSkill(skillId, "nice")}
+                          onRemove={(skillId) => removeSkill(skillId, "nice")}
+                        />
+                      </div>
                     </div>
-
                     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                       <Field label="Additional Notes">
                         <textarea
@@ -394,27 +401,45 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
             
             /* STATE 2: AI EVALUATION RESULTS */
             <div className="flex-1 overflow-y-auto bg-slate-50 px-6 py-12 flex flex-col items-center text-center">
-              {result.status === "approved" ? (
+             {result.status === "approved" ? (
                 <>
-                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 text-3xl">OK</div>
+                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 text-3xl">✓</div>
                   <h2 className="text-2xl font-bold text-gray-800 mb-2">Role Approved!</h2>
-                  <p className="text-gray-600 mb-6 max-w-md">The AI verified your requirements are realistic. The job is now Open and the recruitment pipeline has started.</p>
+                  {/* <p className="text-gray-600 mb-6 max-w-md">The AI verified your requirements are realistic. The job is now Open and the recruitment pipeline has started.</p> */}
+                  
+                  {/* NEW: Show minor AI suggestions even on approval */}
+                  {result.feedback && result.feedback.warnings && result.feedback.warnings.length > 0 && (
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl text-left p-5 w-full max-w-2xl mb-6 text-sm shadow-sm">
+                      <p className="font-semibold text-indigo-800 mb-2 border-b border-indigo-200 pb-2">
+                        💡 AI Notes & Suggestions
+                      </p>
+                      <ul className="list-disc pl-5 text-indigo-700 mt-1 space-y-1">
+                        {result.feedback.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                      </ul>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
                   <div className="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-4 text-3xl">!</div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2">Saved as Draft (HR Review Required)</h2>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-4">HR Review Required</h2>
+                  
+                  {/* COMMENTED OUT BULKY TEXT 
                   <p className="text-gray-600 mb-6 max-w-md">
                     The AI detected some unrealistic expectations or misalignments in your description. 
                     An HR partner has been notified to review this request.
                   </p>
+                  */}
                   
                   {/* Display AI Feedback */}
                   {result.feedback && (
                     <div className="bg-red-50 border border-red-100 rounded-xl text-left p-5 w-full max-w-2xl mb-6 text-sm shadow-sm">
+                      
+                      {/* COMMENTED OUT SCORE 
                       <p className="font-semibold text-red-800 mb-3 border-b border-red-200 pb-2">
                         AI Confidence Score: {result.feedback.score}/100
                       </p>
+                      */}
                       
                       {result.feedback.warnings.length > 0 && (
                         <div className="mb-3">
@@ -438,7 +463,18 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
                 </>
               )}
               
-              <Button onClick={handleFinish} className="w-48 bg-slate-800 text-white hover:bg-slate-900">Got it</Button>
+              {/* Changed behavior: Instead of full reset, allow them to click 'Back to Edit' or 'Got it' */}
+              <div className="flex gap-4">
+                {result.status === "draft" && (
+                  <Button onClick={() => setResult(null)} variant="outline" className="w-32 border-slate-300">
+                    Back to Edit
+                  </Button>
+                )}
+                <Button onClick={handleFinish} className="w-32 bg-slate-800 text-white hover:bg-slate-900">
+                  Got it
+                </Button>
+              </div>
+
             </div>
           )}
         </div>
@@ -447,7 +483,7 @@ export default function CreateDraftJobModal({ isOpen, onClose, onSuccess }: Crea
   );
 }
 
-// --- Inline UI Components (Same as CreateJobModal) ---
+// --- Inline UI Components ---
 
 const inputCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 transition-colors focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40";
 
@@ -468,47 +504,47 @@ const InfoPill: React.FC<{ label: string; value: string }> = ({ label, value }) 
 
 const SkillBucket: React.FC<{
   title: string;
+  type: "must" | "nice";
   selectedSkillIds: string[];
   availableSkills: { id: string; name: string }[];
   getSkillName: (skillId: string) => string;
   onAdd: (skillId: string) => void;
   onRemove: (skillId: string) => void;
-}> = ({ title, selectedSkillIds, availableSkills, getSkillName, onAdd, onRemove }) => {
-  const [pendingSkillId, setPendingSkillId] = React.useState("");
+}> = ({ title, type, selectedSkillIds, availableSkills, getSkillName, onAdd, onRemove }) => {
+  
+  // Dynamic colors based on the type (Must vs Nice)
+  const isMust = type === "must";
+  const titleColor = isMust ? "text-emerald-600" : "text-indigo-600";
+  const pillBg = isMust
+    ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+    : "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100";
+
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</div>
-      <div className="min-h-[88px] rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <div className="flex flex-wrap gap-2">
-          {selectedSkillIds.length === 0 && <p className="text-[13px] text-slate-400">No skills selected yet.</p>}
-          {selectedSkillIds.map((skillId) => (
-            <button
-              key={skillId}
-              type="button"
-              onClick={() => onRemove(skillId)}
-              className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[12px] font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
-            >
-              {getSkillName(skillId)}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-col gap-3">
+      <div className={`text-[12px] font-semibold uppercase tracking-[0.15em] ${titleColor}`}>
+        {title}
       </div>
-      <div className="mt-3 flex gap-2">
-        <select className={inputCls} value={pendingSkillId} onChange={(e) => setPendingSkillId(e.target.value)}>
-          <option value="">Select skill to add</option>
-          {availableSkills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
-        </select>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            if (!pendingSkillId) return;
-            onAdd(pendingSkillId);
-            setPendingSkillId("");
-          }}
-        >
-          Add
-        </Button>
+      
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Render Selected Skill Pills */}
+        {selectedSkillIds.map((skillId) => (
+          <button
+            key={skillId}
+            type="button"
+            onClick={() => onRemove(skillId)}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors ${pillBg}`}
+          >
+            {getSkillName(skillId)}
+            <X size={13} className="opacity-50 transition-opacity hover:opacity-100" />
+          </button>
+        ))}
+
+        {/* The New Searchable Dropdown */}
+        <SearchableDropdown
+          options={availableSkills}
+          onSelect={onAdd}
+          placeholder="+ add skill"
+        />
       </div>
     </div>
   );

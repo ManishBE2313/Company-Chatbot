@@ -30,6 +30,11 @@ export interface CreateJobPayload {
   requirements: Record<string, unknown>;
 }
 
+export interface UpdateJobPayload extends Partial<CreateJobPayload> {
+  status?: JobAttributes["status"];
+  reviewStatus?: JobAttributes["reviewStatus"];
+}
+
 export interface PipelineStagePayload {
   id?: string;
   name: string;
@@ -218,23 +223,127 @@ export class JobService {
     return job;
   }
 
-  public static async updateJobReviewStatus(
-    jobId: string,
-    status: JobAttributes["status"],
-    reviewStatus: JobAttributes["reviewStatus"]
-  ) {
-    await this.getJobForHR(jobId);
+  public static async updateJobForHR(jobId: string, payload: UpdateJobPayload) {
+    let transaction: Transaction | undefined;
 
-    const affectedCount = await JobRepository.updateJob(jobId, {
-      status,
-      reviewStatus,
-    });
+    try {
+      transaction = await getTransaction();
 
-    if (!affectedCount) {
-      throw new Errors.SystemError("Job review status could not be updated.");
+      const existingJob = await JobRepository.findJobWithCriteria(jobId, transaction);
+      if (!existingJob) {
+        throw new Errors.BadRequestError("Job not found for the supplied jobId.");
+      }
+
+      const nextDepartmentId = payload.departmentId !== undefined ? payload.departmentId : existingJob.departmentId;
+      const nextLocationId = payload.locationId !== undefined ? payload.locationId : existingJob.locationId;
+      const nextJobRoleId = payload.jobRoleId !== undefined ? payload.jobRoleId : existingJob.jobRoleId;
+      const nextPanelId = payload.panelId !== undefined ? payload.panelId || null : existingJob.panelId;
+
+      const [department, location, jobRole] = await Promise.all([
+        nextDepartmentId ? JobRepository.findDepartmentById(nextDepartmentId) : null,
+        nextLocationId ? JobRepository.findLocationById(nextLocationId) : null,
+        nextJobRoleId ? JobRepository.findJobRoleById(nextJobRoleId) : null,
+      ]);
+
+      const title = payload.title?.trim() || jobRole?.title || existingJob.title;
+      const departmentLabel = payload.department?.trim() || department?.name || existingJob.department;
+      const locationLabel = payload.location?.trim() || location?.name || existingJob.location;
+
+      if (!title || !departmentLabel || !locationLabel) {
+        throw new Errors.BadRequestError("title, department, and location are required after resolving the selected catalog values.");
+      }
+
+      let pipelineConfig = existingJob.pipelineConfig || null;
+      if (payload.pipelineConfig !== undefined) {
+        pipelineConfig = sanitizePipelineConfig(payload.pipelineConfig);
+      } else if (payload.panelId !== undefined) {
+        pipelineConfig = await buildPanelPipeline(payload.panelId || undefined);
+      }
+
+      const existingRequirements = existingJob.criteria?.requirements || {};
+      const nextRequirements = payload.requirements
+        ? {
+            ...existingRequirements,
+            ...payload.requirements,
+            jobRoleId: jobRole?.id || nextJobRoleId || null,
+            panelId: nextPanelId,
+            departmentId: department?.id || nextDepartmentId || null,
+            locationId: location?.id || nextLocationId || null,
+            employmentType: payload.employmentType ?? existingJob.employmentType ?? null,
+            workModel: payload.workModel ?? existingJob.workModel ?? null,
+            seniorityLevel: payload.seniorityLevel ?? jobRole?.level ?? existingJob.seniorityLevel ?? null,
+            experienceMin: payload.experienceMin ?? existingJob.experienceMin ?? jobRole?.defaultExperienceMin ?? null,
+            experienceMax: payload.experienceMax ?? existingJob.experienceMax ?? jobRole?.defaultExperienceMax ?? null,
+            salaryMin: payload.salaryMin ?? existingJob.salaryMin ?? null,
+            salaryMax: payload.salaryMax ?? existingJob.salaryMax ?? null,
+            currency: payload.currency || existingJob.currency || "USD",
+            payFrequency: payload.payFrequency || existingJob.payFrequency || "YEARLY",
+            salaryVisibility: payload.salaryVisibility || existingJob.salaryVisibility || "PUBLIC",
+          }
+        : existingRequirements;
+
+      const affectedCount = await JobRepository.updateJob(jobId, {
+        title,
+        department: departmentLabel,
+        departmentId: department?.id || nextDepartmentId || null,
+        location: locationLabel,
+        locationId: location?.id || nextLocationId || null,
+        jobRoleId: jobRole?.id || nextJobRoleId || null,
+        panelId: nextPanelId,
+        headcount: payload.headcount ?? existingJob.headcount,
+        status: payload.status ?? existingJob.status,
+        employmentType: payload.employmentType ?? existingJob.employmentType ?? null,
+        workModel: payload.workModel ?? existingJob.workModel ?? null,
+        seniorityLevel: payload.seniorityLevel ?? jobRole?.level ?? existingJob.seniorityLevel ?? null,
+        experienceMin: payload.experienceMin ?? existingJob.experienceMin ?? jobRole?.defaultExperienceMin ?? null,
+        experienceMax: payload.experienceMax ?? existingJob.experienceMax ?? jobRole?.defaultExperienceMax ?? null,
+        salaryMin: payload.salaryMin ?? existingJob.salaryMin ?? null,
+        salaryMax: payload.salaryMax ?? existingJob.salaryMax ?? null,
+        currency: payload.currency || existingJob.currency || "USD",
+        payFrequency: payload.payFrequency || existingJob.payFrequency || "YEARLY",
+        salaryVisibility: payload.salaryVisibility || existingJob.salaryVisibility || "PUBLIC",
+        reviewStatus: payload.reviewStatus ?? existingJob.reviewStatus,
+        pipelineConfig,
+      }, transaction);
+
+      if (!affectedCount) {
+        throw new Errors.SystemError("Job could not be updated.");
+      }
+
+      if (existingJob.criteria) {
+        await JobRepository.updateJobCriteriaByJobId(jobId, {
+          requirements: nextRequirements,
+          isActive: true,
+        }, transaction);
+      } else {
+        await JobRepository.createJobCriteria({
+          organizationId: existingJob.organizationId || DEFAULT_ORGANIZATION_ID,
+          jobId,
+          requirements: nextRequirements,
+          isActive: true,
+        }, transaction);
+      }
+
+      await transaction.commit();
+
+      const updatedJob = await this.getJobForHR(jobId);
+
+      if (updatedJob.status === "Open" && updatedJob.reviewStatus === "approved") {
+        const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+        axios.post(`${fastApiUrl}/api/jobs/setup`, {
+          jobId: updatedJob.id,
+          title: updatedJob.title,
+          requirements: updatedJob.criteria?.requirements || nextRequirements,
+        }).catch((err) => console.error("Failed to trigger FastAPI job setup:", err.message));
+      }
+
+      return updatedJob;
+    } catch (error) {
+      if (transaction) {
+        await transaction.rollback();
+      }
+      throw error;
     }
-
-    return this.getJobForHR(jobId);
   }
 
   public static async updatePipelineConfig(jobId: string, pipelineConfig: PipelineStagePayload[]) {

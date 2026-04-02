@@ -1,4 +1,5 @@
-﻿export type JobStatus = "Open" | "Closed" | "Draft" | "Paused";
+export type JobStatus = "Open" | "Closed" | "Draft" | "Paused";
+export type JobReviewStatus = "approved" | "needs_review" | "blocked";
 export type UserRole = "user" | "interviewer" | "admin" | "superadmin";
 
 export interface DepartmentCatalog {
@@ -76,6 +77,47 @@ export interface PipelineStageConfig {
   interviewerEmails?: string[];
 }
 
+export interface JobDescriptionTemplate {
+  id: string;
+  title: string;
+  jobRoleId?: string | null;
+  description: string;
+  refinedDescription?: string | null;
+  mustHaveSkillIds?: string[];
+  niceToHaveSkillIds?: string[];
+  mustHaveSkills?: SkillCatalog[];
+  niceToHaveSkills?: SkillCatalog[];
+  jobRole?: JobRoleCatalog | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JobDescriptionAnalysis {
+  refinedDescription: string;
+  mustHaveSkills: string[];
+  niceToHaveSkills: string[];
+  summary?: string;
+  suggestions?: string[];
+}
+
+export interface TextSuggestionResult {
+  status: "clear" | "ambiguous" | "rewrite";
+  result: string;
+  options?: string[];
+}
+
+export interface JobCreatedBy {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+export interface JobCriteriaSummary {
+  requirements: JobRequirements & Record<string, unknown>;
+  isActive?: boolean;
+}
+
 export interface Job {
   id: string;
   title: string;
@@ -97,11 +139,14 @@ export interface Job {
   currency?: string | null;
   payFrequency?: "HOURLY" | "WEEKLY" | "MONTHLY" | "YEARLY" | null;
   salaryVisibility?: "PUBLIC" | "INTERNAL" | "HIDDEN" | null;
-  reviewStatus?: "approved" | "needs_review" | "blocked";
+  aiMatchPercentage?: number | null;
+  reviewStatus?: JobReviewStatus;
   pipelineConfig?: PipelineStageConfig[] | null;
   jobRole?: JobRoleCatalog | null;
   locationRef?: LocationCatalog | null;
   panel?: InterviewPanelCatalog | null;
+  criteria?: JobCriteriaSummary | null;
+  createdBy?: JobCreatedBy | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -126,6 +171,11 @@ export interface CreateJobPayload {
   payFrequency?: "HOURLY" | "WEEKLY" | "MONTHLY" | "YEARLY";
   salaryVisibility?: "PUBLIC" | "INTERNAL" | "HIDDEN";
   requirements: JobRequirements;
+}
+
+export interface UpdateJobPayload extends Partial<CreateJobPayload> {
+  status?: JobStatus;
+  reviewStatus?: JobReviewStatus;
 }
 
 export interface JobRequirements {
@@ -272,3 +322,5 @@ export interface RoleOption {
   name: string;
   description?: string | null;
 }
+
+
