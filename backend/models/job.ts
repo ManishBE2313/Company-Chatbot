@@ -208,6 +208,7 @@ export default function JobModel(
     Job.belongsTo(models.jobRole, { foreignKey: "jobRoleId", as: "jobRole" });
     Job.belongsTo(models.interviewPanel, { foreignKey: "panelId", as: "panel" });
     Job.belongsTo(models.user, { foreignKey: "createdById", as: "createdBy" });
+
     Job.hasOne(models.jobCriteria, {
       foreignKey: "jobId",
       as: "criteria",

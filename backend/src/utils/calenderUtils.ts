@@ -49,7 +49,7 @@ export function getFreeWindows(workingStart, workingEnd, busySlots) {
    - Takes free windows (e.g., 11–15)
    - Divides them into slots of given duration (e.g., 30 minutes)
  */
-export function generateSlots(freeWindows, duration) {
+export function generateSlots(freeWindows, duration, gapInMinutes) {
   const slots = [];
 
   for (const window of freeWindows) {
@@ -62,7 +62,7 @@ export function generateSlots(freeWindows, duration) {
 
       slots.push({ startTime: start, endTime: end });
 
-      start = end;
+      start = new Date(end.getTime()+gapInMinutes * 60000);
     }
   }
 

@@ -8,6 +8,7 @@ import { UserRepository } from "../repositories/user";
 import { Op } from "sequelize";
 import { JobApplication, Job, Interview } from "../config/database";
 
+
 export class ApplicationService {
   public static async listAllApplications(filters: {
     jobId?: string;
@@ -186,6 +187,7 @@ export class ApplicationService {
     return await ScorecardRepository.create({
       interviewId,
       interviewerId: effectiveInterviewerId,
+      organizationId: interview.organizationId,
       technicalScore,
       communicationScore,
       recommendation,

@@ -21,6 +21,9 @@ import ScorecardModel from "../../models/scorecard";
 import PipelineEventModel from "../../models/pipelineEvent";
 import { runtimeConfig } from "./runtime";
 
+import CandidateTraceModel from "../../models/candidateTrace";
+import JobTraceabilityModel from "../../models/jobTraceability";
+
 const isProduction = runtimeConfig.nodeEnv.toLowerCase() === "production";
 
 export const sequelize = new Sequelize(
@@ -64,6 +67,8 @@ export const InterviewSlot = InterviewSlotModel(sequelize);
 export const Interview = InterviewModel(sequelize);
 export const Scorecard = ScorecardModel(sequelize);
 export const PipelineEvent = PipelineEventModel(sequelize);
+export const CandidateTrace = CandidateTraceModel(sequelize);
+export const JobTraceability = JobTraceabilityModel(sequelize);
 
 const models = {
   organization: Organization,
@@ -86,6 +91,8 @@ const models = {
   interview: Interview,
   scorecard: Scorecard,
   pipelineEvent: PipelineEvent,
+  candidateTrace: CandidateTrace,
+  jobTraceability: JobTraceability,
 };
 
 for (const model of Object.values(models) as Array<any>) {
@@ -101,3 +108,4 @@ export type MainDbModelName = keyof typeof models;
 export function getMainDbModel<T extends MainDbModelName>(modelName: T) {
   return models[modelName];
 }
+export {models};

@@ -15,7 +15,9 @@ import interviewSlotRouter from "./routes/interviewSlot";
 import interviewRouter from "./routes/interview";
 import batchIngestRouter from "./routes/hr/batchIngest";
 import dotenv from "dotenv";
-import { startSlotSyncCron } from "./cron/syncInterviewSlots";
+import traceabilityRoutes from "./routes/traceability";
+import { models } from "./config/database";
+
 dotenv.config();
 
 const app = express();
@@ -23,7 +25,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-startSlotSyncCron();
+// Inject models into every request
+app.use((req: any, _res, next) => {
+  req.models = models;
+  next();
+});
+
+
+// Start event-driven traceability system
 
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok" });
@@ -32,6 +41,8 @@ app.get("/health", (_req: Request, res: Response) => {
 app.use("/api/auth", authRouter);
 app.use("/api/candidates", candidateRouter);
 app.use("/api/hr/applications", hrApplicationRouter);
+app.use("/api/traceability", traceabilityRoutes);
+
 app.use("/api/hr/jobs", hrJobRouter);
 app.use("/api/hr/catalog", hrCatalogRouter);
 app.use("/api/hr/settings", hrSettingsRouter);
@@ -43,6 +54,7 @@ app.use("/api/notifications", notificationRouter);
 app.use("/api/slots", interviewSlotRouter);
 app.use("/api/interviews", interviewRouter);
 app.use("/api/hr/jobs/:jobId", batchIngestRouter);
+
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(new Errors.BadRequestError("Route not found: " + req.method + " " + req.originalUrl));

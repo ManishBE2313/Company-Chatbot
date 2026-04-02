@@ -3,6 +3,8 @@ import { ApplicationService } from "../services/application";
 import { validateQueryParams, QueryValidationRules } from "../utils/validation";
 import { PipelineService } from "../services/pipeline";
 import { InterviewRepository } from "../repositories/InterviewRepository";
+import { eventBus } from "../events/eventBus";
+import { EVENTS } from "../events/events";
 
 export class ScorecardController {
   public static async createScorecard(req: any, res: Response, next: NextFunction) {
@@ -73,6 +75,10 @@ export class ScorecardController {
             `Scorecard Submitted: ${req.body.recommendation}. Pipeline finished or candidate on hold.`
           );
         }
+        eventBus.emit(EVENTS.SCORE_ADDED, {
+    applicationId: interview.applicationId,
+  });
+
       }
 
       res.status(201).json({
