@@ -80,27 +80,27 @@ type EmployeeProfileData = {
 const STEPS = [
   {
     title: 'Contact',
-    description: 'Email, phone, and location details',
+    description: 'Email, phone, and location',
     icon: Mail,
   },
   {
     title: 'Personal',
-    description: 'Identity and personal profile information',
+    description: 'Identity and profile details',
     icon: User,
   },
   {
     title: 'Work',
-    description: 'Reporting structure and joining details',
+    description: 'Reporting and joining info',
     icon: Briefcase,
   },
   {
     title: 'Emergency',
-    description: 'Reliable contact for urgent situations',
+    description: 'Urgent contact details',
     icon: Phone,
   },
   {
     title: 'Education',
-    description: 'Academic background and qualifications',
+    description: 'Academic background',
     icon: GraduationCap,
   },
 ];
@@ -111,14 +111,14 @@ function InputField({
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-4">
-        <label className="text-[13px] font-semibold text-slate-700">{label}</label>
-        {hint ? <span className="text-[11px] text-slate-400">{hint}</span> : null}
+        <label className="text-sm font-medium text-slate-700">{label}</label>
+        {hint ? <span className="text-xs text-slate-400">{hint}</span> : null}
       </div>
       <input
         {...props}
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-all placeholder:text-slate-400 focus:border-[#fc636b] focus:ring-4 focus:ring-rose-100"
+        className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 hover:border-slate-300 hover:bg-slate-50 focus:border-teal-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/10"
       />
     </div>
   );
@@ -126,24 +126,23 @@ function InputField({
 
 function SectionIntro({
   icon: Icon,
-  eyebrow,
   title,
   description,
 }: {
   icon: typeof Mail;
-  eyebrow: string;
   title: string;
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-[linear-gradient(135deg,#fff7f5_0%,#ffffff_55%,#fff1f2_100%)] p-5">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1f243d] text-white shadow-lg shadow-slate-200">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="space-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#fc636b]">{eyebrow}</p>
-        <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
-        <p className="max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
+    <div className="mb-6 border-b border-slate-100 pb-6">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <p className="text-sm text-slate-500">{description}</p>
+        </div>
       </div>
     </div>
   );
@@ -151,7 +150,7 @@ function SectionIntro({
 
 function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_18px_40px_rgba(15,23,42,0.05)] ${className}`}>
+    <div className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -298,100 +297,78 @@ export default function CompleteProfilePage() {
   const progress = (step / STEPS.length) * 100;
   const currentStep = STEPS[step - 1];
   const profileName = [employee?.firstName, employee?.lastName].filter(Boolean).join(' ') || 'Employee profile';
-  const initials =
-    `${employee?.firstName?.[0] ?? 'E'}${employee?.lastName?.[0] ?? 'P'}`.toUpperCase();
+  const initials = `${employee?.firstName?.[0] ?? 'E'}${employee?.lastName?.[0] ?? 'P'}`.toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(252,99,107,0.10),_transparent_28%),linear-gradient(180deg,#fcfcfd_0%,#f7f8fb_100%)] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 rounded-[32px] border border-slate-200 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur sm:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-rose-100 bg-rose-50 px-3 py-1 text-xs font-semibold text-[#c74452]">
-                <Sparkles className="h-3.5 w-3.5" />
-               Employee Information Portal
-              </div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                Complete your employee profile
-              </h1>
-              <p className="mt-3 max-w-xl text-[15px] leading-7 text-slate-500">
-                Add the details your team needs for communication, operations, and people records. Everything is organized step by step so you can finish quickly.
-              </p>
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      {/* Top Navigation / Header */}
+      <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-slate-900 text-white">
+              <Sparkles className="h-4 w-4" />
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[360px]">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Progress</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">{Math.round(progress)}%</p>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">
+              Employee Onboarding
+            </h1>
+          </div>
+          <div className="hidden items-center gap-4 text-sm sm:flex">
+            <span className="text-slate-500">Profile Completion</span>
+            <div className="flex items-center gap-3">
+              <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-teal-500 transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Current step</p>
-                <p className="mt-2 text-base font-semibold text-slate-900">{currentStep.title}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Records</p>
-                <p className="mt-2 text-base font-semibold text-slate-900">{form.education.length} education items</p>
-              </div>
+              <span className="font-semibold text-slate-700">{Math.round(progress)}%</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+          
+          {/* Left Sidebar */}
           <div className="space-y-6">
-            <Panel className="overflow-hidden p-0">
-              <div className="bg-[linear-gradient(135deg,#1f243d_0%,#2f365c_100%)] px-6 py-7 text-white">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/14 text-lg font-semibold ring-1 ring-white/20">
-                    {initials}
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold">{profileName}</p>
-                    <p className="mt-1 text-sm text-slate-200">
-                      {employee?.workInfo?.designation || 'Employee'}
-                      {employee?.workInfo?.department ? ` | ${employee.workInfo.department}` : ''}
-                    </p>
-                  </div>
+            {/* Employee Summary Card */}
+            <Panel className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg font-bold text-slate-700">
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold text-slate-900">{profileName}</p>
+                  <p className="truncate text-sm text-slate-500">
+                    {employee?.workInfo?.designation || 'Pending Title'}
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-4 px-6 py-5">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Mail className="h-4 w-4 text-slate-400" />
-                    <span>{form.contact.personalEmail || employee?.email || 'No personal email added yet'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Phone className="h-4 w-4 text-slate-400" />
-                    <span>{form.contact.phone || 'Phone number pending'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <MapPin className="h-4 w-4 text-slate-400" />
-                    <span>{form.contact.city || employee?.workInfo?.location || 'Location not added'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <CalendarDays className="h-4 w-4 text-slate-400" />
-                    <span>{form.work.dateOfJoining || 'Joining date pending'}</span>
-                  </div>
+              <div className="mt-6 space-y-4 border-t border-slate-100 pt-6">
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="h-4 w-4 shrink-0 text-slate-400" />
+                  <span className="truncate text-slate-600">
+                    {form.contact.personalEmail || employee?.email || 'Email pending'}
+                  </span>
                 </div>
-
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  Keep this profile complete so HR, payroll, and your reporting team always have the latest information.
+                <div className="flex items-center gap-3 text-sm">
+                  <Phone className="h-4 w-4 shrink-0 text-slate-400" />
+                  <span className="text-slate-600">{form.contact.phone || 'Phone pending'}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
+                  <span className="text-slate-600">
+                    {form.contact.city || employee?.workInfo?.location || 'Location pending'}
+                  </span>
                 </div>
               </div>
             </Panel>
 
-            <Panel className="p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Profile sections</p>
-                  <p className="text-xs text-slate-500">Move through each section in order</p>
-                </div>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  {step}/{STEPS.length}
-                </span>
-              </div>
-
-              <div className="space-y-2">
+            {/* Step Navigation */}
+            <nav aria-label="Progress">
+              <ol role="list" className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                 {STEPS.map((item, index) => {
                   const Icon = item.icon;
                   const itemStep = index + 1;
@@ -399,349 +376,327 @@ export default function CompleteProfilePage() {
                   const isComplete = itemStep < step;
 
                   return (
-                    <button
-                      key={item.title}
-                      type="button"
-                      onClick={() => setStep(itemStep)}
-                      className={`flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition-all ${
-                        isActive
-                          ? 'bg-rose-50 ring-1 ring-rose-200'
-                          : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div
-                        className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl ${
-                          isComplete
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : isActive
-                              ? 'bg-[#fc636b] text-white'
-                              : 'bg-slate-100 text-slate-500'
+                    <li key={item.title} className="relative">
+                      {index !== STEPS.length - 1 ? (
+                        <div className="absolute left-6 top-10 -ml-px h-full w-0.5 bg-slate-100" aria-hidden="true" />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setStep(itemStep)}
+                        className={`group relative flex w-full items-start px-5 py-4 transition-colors hover:bg-slate-50 ${
+                          isActive ? 'bg-slate-50/50' : ''
                         }`}
                       >
-                        {isComplete ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className={`text-sm font-semibold ${isActive ? 'text-slate-950' : 'text-slate-700'}`}>
-                          {item.title}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">{item.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </Panel>
-          </div>
-
-          <div className="space-y-4">
-          <Panel className="overflow-hidden p-0">
-            <div className="border-b border-slate-200 px-6 py-5 sm:px-8">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Step {step} of {STEPS.length}
-                  </p>
-                  <h2 className="mt-2 text-2xl font-semibold text-slate-950">{currentStep.title}</h2>
-                  <p className="mt-1 text-sm text-slate-500">{currentStep.description}</p>
-                </div>
-
-                <div className="w-full max-w-xs">
-                  <div className="mb-2 flex items-center justify-between text-xs font-medium text-slate-400">
-                    <span>Completion progress</span>
-                    <span>{Math.round(progress)}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-100">
-                    <div
-                      className="h-2 rounded-full bg-[linear-gradient(90deg,#fc636b_0%,#ff9b7a_100%)] transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6 p-6 sm:p-8">
-              {step === 1 && (
-                <div className="space-y-6">
-                  <SectionIntro
-                    icon={Mail}
-                    eyebrow="Contact"
-                    title="Make it easy to reach you"
-                    description="These details help your team communicate smoothly and keep employee records accurate across HR and operations."
-                  />
-
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <InputField
-                        label="Personal Email"
-                        type="email"
-                        placeholder="name@example.com"
-                        value={form.contact.personalEmail}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('contact', 'personalEmail', e.target.value)}
-                      />
-                    </div>
-                    <InputField
-                      label="Phone Number"
-                      type="tel"
-                      placeholder="+1 (555) 000-0000"
-                      value={form.contact.phone}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('contact', 'phone', e.target.value)}
-                    />
-                    <InputField
-                      label="City"
-                      placeholder="San Francisco"
-                      value={form.contact.city}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('contact', 'city', e.target.value)}
-                    />
-                    <div className="sm:col-span-2">
-                      <InputField
-                        label="Address Line"
-                        placeholder="Apartment, suite, building, street"
-                        value={form.contact.address}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('contact', 'address', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {step === 2 && (
-                <div className="space-y-6">
-                  <SectionIntro
-                    icon={User}
-                    eyebrow="Personal"
-                    title="Personal identity and compliance details"
-                    description="Capture the information commonly required for employee records, identification, and internal administration."
-                  />
-
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <InputField
-                      label="Date of Birth"
-                      type="date"
-                      value={form.personal.dob}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'dob', e.target.value)}
-                    />
-                    <InputField
-                      label="Nationality"
-                      placeholder="e.g., Indian"
-                      value={form.personal.nationality}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'nationality', e.target.value)}
-                    />
-                    <InputField
-                      label="Blood Group"
-                      placeholder="O+"
-                      value={form.personal.bloodGroup}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'bloodGroup', e.target.value)}
-                    />
-                    <InputField
-                      label="Marital Status"
-                      placeholder="Single"
-                      value={form.personal.maritalStatus}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'maritalStatus', e.target.value)}
-                    />
-                    <InputField
-                      label="Aadhar Number"
-                      placeholder="0000 0000 0000"
-                      value={form.personal.aadhar}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'aadhar', e.target.value)}
-                    />
-                    <InputField
-                      label="UAN Number"
-                      placeholder="100000000000"
-                      value={form.personal.uan}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'uan', e.target.value)}
-                    />
-                    <InputField
-                      label="PAN Number"
-                      placeholder="ABCDE1234F"
-                      value={form.personal.pan}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'pan', e.target.value)}
-                    />
-                    <InputField
-                      label="Passport Number"
-                      placeholder="Z1234567"
-                      value={form.personal.passport}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'passport', e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {step === 3 && (
-                <div className="space-y-6">
-                  <SectionIntro
-                    icon={Briefcase}
-                    eyebrow="Work"
-                    title="Employment and reporting information"
-                    description="This section keeps your team structure, employment dates, and compensation records aligned for internal workflows."
-                  />
-
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <InputField
-                        label="Reporting Manager"
-                        placeholder="John Doe"
-                        value={form.work.reportingManager}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('work', 'reportingManager', e.target.value)}
-                      />
-                    </div>
-                    <InputField
-                      label="Date of Joining"
-                      type="date"
-                      value={form.work.dateOfJoining}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('work', 'dateOfJoining', e.target.value)}
-                    />
-                    <InputField
-                      label="Annual Compensation"
-                      type="number"
-                      placeholder="50000"
-                      value={form.work.annualCompensation}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('work', 'annualCompensation', e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {step === 4 && (
-                <div className="space-y-6">
-                  <SectionIntro
-                    icon={ShieldCheck}
-                    eyebrow="Emergency"
-                    title="Emergency contact details"
-                    description="Choose someone dependable who can be reached quickly if support is needed outside normal communication channels."
-                  />
-
-                  <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
-                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
-                    <p className="text-sm leading-6 text-amber-900">
-                      Please provide reliable contact information for urgent situations. This should be someone your organization can reach without delay.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <InputField
-                        label="Contact Name"
-                        placeholder="Jane Doe"
-                        value={form.emergency.name}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('emergency', 'name', e.target.value)}
-                      />
-                    </div>
-                    <InputField
-                      label="Relationship"
-                      placeholder="Spouse"
-                      value={form.emergency.relation}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('emergency', 'relation', e.target.value)}
-                    />
-                    <InputField
-                      label="Phone Number"
-                      placeholder="+1 (555) 000-0000"
-                      value={form.emergency.phone}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('emergency', 'phone', e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {step === 5 && (
-                <div className="space-y-6">
-                  <SectionIntro
-                    icon={GraduationCap}
-                    eyebrow="Education"
-                    title="Showcase your academic background"
-                    description="List your degrees, institutes, and scores so your employee record reflects your qualification history clearly."
-                  />
-
-                  <div className="space-y-4">
-                    {form.education.map((edu, index) => (
-                      <div
-                        key={index}
-                        className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbfd_100%)] p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]"
-                      >
-                        <div className="mb-5 flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">Education record {index + 1}</p>
-                            <p className="text-xs text-slate-500">Add degree details and academic performance</p>
-                          </div>
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            Record {index + 1}
+                        <div className="flex h-9 items-center">
+                          <span
+                            className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full ${
+                              isComplete
+                                ? 'bg-teal-500 text-white'
+                                : isActive
+                                ? 'border-2 border-teal-500 bg-white text-teal-600'
+                                : 'border-2 border-slate-200 bg-white text-slate-400 group-hover:border-slate-300'
+                            }`}
+                          >
+                            {isComplete ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <span className="text-xs font-semibold">{itemStep}</span>
+                            )}
                           </span>
                         </div>
-
-                        <div className="grid gap-5 sm:grid-cols-2">
-                          <div className="sm:col-span-2">
-                            <InputField
-                              label="Degree / Course"
-                              placeholder="B.Tech Computer Science"
-                              value={edu.type}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleEducationChange(index, 'type', e.target.value)}
-                            />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <InputField
-                              label="Institute"
-                              placeholder="Stanford University"
-                              value={edu.institute}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleEducationChange(index, 'institute', e.target.value)}
-                            />
-                          </div>
-                          <InputField
-                            label="Graduation Year"
-                            type="number"
-                            placeholder="2022"
-                            value={edu.year}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleEducationChange(index, 'year', e.target.value)}
-                          />
-                          <InputField
-                            label="Score / GPA"
-                            placeholder="3.8"
-                            value={edu.percentage}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleEducationChange(index, 'percentage', e.target.value)}
-                          />
+                        <div className="ml-4 min-w-0 flex-1 flex-col text-left">
+                          <span
+                            className={`text-sm font-semibold ${
+                              isActive ? 'text-teal-700' : isComplete ? 'text-slate-900' : 'text-slate-500'
+                            }`}
+                          >
+                            {item.title}
+                          </span>
+                          <span className="text-xs text-slate-500">{item.description}</span>
                         </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </nav>
+          </div>
+
+          {/* Main Form Content */}
+          <div className="flex flex-col gap-6">
+            <Panel className="overflow-hidden">
+              <div className="p-6 sm:p-8">
+                {step === 1 && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <SectionIntro
+                      icon={Mail}
+                      title="Contact Information"
+                      description="How can we reach you? These details keep your employee records accurate."
+                    />
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <InputField
+                          label="Personal Email"
+                          type="email"
+                          placeholder="name@example.com"
+                          value={form.contact.personalEmail}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('contact', 'personalEmail', e.target.value)}
+                        />
                       </div>
-                    ))}
+                      <InputField
+                        label="Phone Number"
+                        type="tel"
+                        placeholder="+1 (555) 000-0000"
+                        value={form.contact.phone}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('contact', 'phone', e.target.value)}
+                      />
+                      <InputField
+                        label="City"
+                        placeholder="San Francisco"
+                        value={form.contact.city}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('contact', 'city', e.target.value)}
+                      />
+                      <div className="sm:col-span-2">
+                        <InputField
+                          label="Street Address"
+                          placeholder="Apartment, suite, building, street"
+                          value={form.contact.address}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('contact', 'address', e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
+                )}
 
-                  <button
-                    type="button"
-                    onClick={addEducation}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-600 transition hover:border-[#fc636b] hover:bg-rose-50 hover:text-[#c74452]"
-                  >
-                    <span className="text-lg leading-none">+</span>
-                    Add education record
-                  </button>
-                </div>
-              )}
-            </div>
+                {step === 2 && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <SectionIntro
+                      icon={User}
+                      title="Personal Details"
+                      description="Required for compliance, identification, and internal administration."
+                    />
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      <InputField
+                        label="Date of Birth"
+                        type="date"
+                        value={form.personal.dob}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'dob', e.target.value)}
+                      />
+                      <InputField
+                        label="Nationality"
+                        placeholder="e.g., Indian"
+                        value={form.personal.nationality}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'nationality', e.target.value)}
+                      />
+                      <InputField
+                        label="Blood Group"
+                        placeholder="O+"
+                        value={form.personal.bloodGroup}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'bloodGroup', e.target.value)}
+                      />
+                      <InputField
+                        label="Marital Status"
+                        placeholder="Single"
+                        value={form.personal.maritalStatus}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'maritalStatus', e.target.value)}
+                      />
+                      <InputField
+                        label="Aadhar Number"
+                        placeholder="0000 0000 0000"
+                        value={form.personal.aadhar}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'aadhar', e.target.value)}
+                      />
+                      <InputField
+                        label="PAN Number"
+                        placeholder="ABCDE1234F"
+                        value={form.personal.pan}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'pan', e.target.value)}
+                      />
+                      <InputField
+                        label="UAN Number"
+                        placeholder="100000000000"
+                        value={form.personal.uan}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'uan', e.target.value)}
+                      />
+                      <InputField
+                        label="Passport Number"
+                        placeholder="Z1234567"
+                        value={form.personal.passport}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('personal', 'passport', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
 
-          </Panel>
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                {step === 3 && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <SectionIntro
+                      icon={Briefcase}
+                      title="Work Details"
+                      description="Keeps your team structure and employment records aligned."
+                    />
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <InputField
+                          label="Reporting Manager"
+                          placeholder="Manager's Name"
+                          value={form.work.reportingManager}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('work', 'reportingManager', e.target.value)}
+                        />
+                      </div>
+                      <InputField
+                        label="Date of Joining"
+                        type="date"
+                        value={form.work.dateOfJoining}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('work', 'dateOfJoining', e.target.value)}
+                      />
+                      <InputField
+                        label="Annual Compensation"
+                        type="number"
+                        placeholder="50000"
+                        value={form.work.annualCompensation}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('work', 'annualCompensation', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {step === 4 && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <SectionIntro
+                      icon={ShieldCheck}
+                      title="Emergency Contact"
+                      description="Who should we contact in case of an urgent situation?"
+                    />
+                    
+                    <div className="mb-6 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                      <p className="text-sm text-amber-900">
+                        Please provide reliable contact information. This should be someone we can reach without delay in emergencies.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <InputField
+                          label="Contact Name"
+                          placeholder="Jane Doe"
+                          value={form.emergency.name}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('emergency', 'name', e.target.value)}
+                        />
+                      </div>
+                      <InputField
+                        label="Relationship"
+                        placeholder="Spouse, Parent, etc."
+                        value={form.emergency.relation}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('emergency', 'relation', e.target.value)}
+                      />
+                      <InputField
+                        label="Phone Number"
+                        placeholder="+1 (555) 000-0000"
+                        value={form.emergency.phone}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('emergency', 'phone', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {step === 5 && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <SectionIntro
+                      icon={GraduationCap}
+                      title="Education History"
+                      description="List your degrees and institutes to complete your academic profile."
+                    />
+
+                    <div className="space-y-6">
+                      {form.education.map((edu, index) => (
+                        <div
+                          key={index}
+                          className="relative rounded-xl border border-slate-200 bg-slate-50/50 p-6"
+                        >
+                          <div className="mb-5 flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-slate-900">Record {index + 1}</h3>
+                            {form.education.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = form.education.filter((_, i) => i !== index);
+                                  setForm({ ...form, education: updated });
+                                }}
+                                className="text-xs font-medium text-red-600 hover:text-red-700"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid gap-5 sm:grid-cols-2">
+                            <div className="sm:col-span-2">
+                              <InputField
+                                label="Degree / Course"
+                                placeholder="e.g., B.Tech Computer Science"
+                                value={edu.type}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => handleEducationChange(index, 'type', e.target.value)}
+                              />
+                            </div>
+                            <div className="sm:col-span-2">
+                              <InputField
+                                label="Institute"
+                                placeholder="University Name"
+                                value={edu.institute}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => handleEducationChange(index, 'institute', e.target.value)}
+                              />
+                            </div>
+                            <InputField
+                              label="Graduation Year"
+                              type="number"
+                              placeholder="YYYY"
+                              value={edu.year}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleEducationChange(index, 'year', e.target.value)}
+                            />
+                            <InputField
+                              label="Score / GPA"
+                              placeholder="e.g., 3.8 or 85%"
+                              value={edu.percentage}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleEducationChange(index, 'percentage', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={addEducation}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-white p-4 text-sm font-medium text-slate-600 transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700"
+                      >
+                        <span className="text-lg leading-none">+</span>
+                        Add another degree
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Action Bar */}
+              <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:px-8">
                 <button
                   type="button"
                   onClick={() => setStep(step - 1)}
                   disabled={step === 1}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200/50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-40"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Back
                 </button>
 
-                <p className="max-w-md text-sm text-slate-500">
-                  {step < STEPS.length ? 'Review this section, then continue to the next one.' : 'Everything looks ready for submission.'}
-                </p>
-              </div>
-
-              <div className="flex-shrink-0">
                 {step < STEPS.length ? (
                   <button
                     type="button"
                     onClick={() => setStep(step + 1)}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1f243d] px-6 py-3.5 text-sm font-semibold text-black shadow-lg shadow-slate-200 transition hover:bg-[#171b2d] sm:w-auto"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-900/10"
                   >
-                    Continue
+                    Next step
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 ) : (
@@ -749,21 +704,20 @@ export default function CompleteProfilePage() {
                     type="button"
                     onClick={submit}
                     disabled={isLoading}
-                    className="inline-flex w-full min-w-[190px] items-center justify-center gap-2 rounded-xl bg-[#fc636b] px-6 py-3.5 text-sm font-semibold text-black shadow-lg shadow-rose-200 transition hover:bg-[#f2555f] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                    className="inline-flex min-w-[140px] items-center justify-center gap-2 rounded-lg bg-slate-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-600/20 disabled:pointer-events-none disabled:opacity-70"
                   >
                     {isLoading ? (
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        Submit profile
+                        Complete Profile
                       </>
                     )}
                   </button>
                 )}
               </div>
-            </div>
-          </div>
+            </Panel>
           </div>
         </div>
       </div>

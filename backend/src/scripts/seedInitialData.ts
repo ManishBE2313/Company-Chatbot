@@ -3,6 +3,28 @@ import { sequelize, Organization, Department, Location, AccessRole, Skill, JobRo
 import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_NAME, PRIMARY_ROLE_RANK } from "../constants/system";
 import { seedDepartments, seedJobRoles, seedLocations, seedRoleNames, seedSkills } from "../data/initialCatalog";
 
+async function getTableColumns(tableName: string) {
+  const columns = await sequelize.query(`SHOW COLUMNS FROM \`${tableName}\``, {
+    type: QueryTypes.SELECT,
+  }) as Array<{ Field: string }>;
+
+  return new Set(columns.map((column) => column.Field));
+}
+
+async function canUseHrEmployeeModel() {
+  const tableMatches = await sequelize.query("SHOW TABLES LIKE 'employees'", {
+    type: QueryTypes.SELECT,
+  }) as any[];
+
+  if (!tableMatches.length) {
+    return false;
+  }
+
+  const columns = await getTableColumns("employees");
+
+  return ["organization_id", "email", "role", "status"].every((column) => columns.has(column));
+}
+
 function normalizePrimaryRole(roleNames: string[]) {
   for (const role of PRIMARY_ROLE_RANK) {
     if (roleNames.includes(role)) {
@@ -147,6 +169,11 @@ async function seedJobRolesForOrg() {
 }
 
 async function migrateLegacyUsersIfNeeded() {
+  if (!(await canUseHrEmployeeModel())) {
+    console.warn("Skipping legacy user migration: employees table does not have HR auth columns yet.");
+    return;
+  }
+
   const tableMatches = await sequelize.query("SHOW TABLES LIKE 'users'", {
     type: QueryTypes.SELECT,
   }) as any[];
@@ -182,6 +209,11 @@ async function migrateLegacyUsersIfNeeded() {
 }
 
 async function ensureEmployeeRoleAssignments() {
+  if (!(await canUseHrEmployeeModel())) {
+    console.warn("Skipping employee role assignment seed: employees table is still using the legacy profile schema.");
+    return;
+  }
+
   const roles = await AccessRole.findAll({ where: { organizationId: DEFAULT_ORGANIZATION_ID } }) as any[];
   const rolesByName = new Map(roles.map((role) => [role.get("name"), role.get("id")]));
   const employees = await User.findAll({ where: { organizationId: DEFAULT_ORGANIZATION_ID } }) as any[];

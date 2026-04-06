@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Users,
   Settings, 
+  ClipboardCheck,
 } from "lucide-react";
 import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 
@@ -30,6 +31,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: "My Interviews", href: "/hr/my-interviews", icon: <CalendarRange size={16} /> },
   { label: "Jobs", href: "/hr/jobs", icon: <Briefcase size={16} /> },
   { label: "Applications", href: "/hr/applications", icon: <Users size={16} /> },
+  {
+    label: "Timesheets",
+    href: "/hr/timesheets",
+    icon: <ClipboardCheck size={16} />,
+    minRole: "admin",
+  },
   {
     label: "Company Settings", // <-- New Tab
     href: "/hr/settings",

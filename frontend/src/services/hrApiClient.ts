@@ -16,10 +16,7 @@ import {
   JobFormCatalog,
   EmployeeListItem,
   RoleOption,
-  JobDescriptionTemplate,
-  JobDescriptionAnalysis,
-  TextSuggestionResult,
-  SkillCatalog,
+  TimesheetReviewResponse,
 } from "@/types/hr";
 
 const fastApiClient = axios.create({
@@ -31,6 +28,14 @@ const fastApiClient = axios.create({
 });
 
 const nextApiClient = axios.create({
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+const employeeApiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL2 || "http://localhost:3000",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -327,65 +332,24 @@ export async function updateEmployeeRoles(
   }
 }
 
-
-export async function getSettingsSkills(): Promise<SkillCatalog[]> {
+export async function getTimesheetsForReview(claimMonth?: string): Promise<TimesheetReviewResponse> {
   try {
-    const response = await nextApiClient.get<{ data: SkillCatalog[] }>("/api/hr/settings/skills");
+    const response = await employeeApiClient.get<{ data: TimesheetReviewResponse }>("/api/employee/timesheets/review", {
+      params: claimMonth ? { claimMonth } : undefined,
+    });
     return response.data.data;
   } catch (error) {
-    throw new Error(getErrorMessage(error, "Failed to fetch skills."));
+    throw new Error(getErrorMessage(error, "Failed to fetch timesheets for review."));
   }
 }
 
-export async function createSettingsSkill(payload: { name: string; category: string }): Promise<SkillCatalog> {
+export async function reviewTimesheet(timesheetId: string, status: "approved" | "rejected", remarks?: string): Promise<void> {
   try {
-    const response = await nextApiClient.post<{ data: SkillCatalog }>("/api/hr/settings/skills", payload);
-    return response.data.data;
+    await employeeApiClient.patch(`/api/employee/timesheets/${timesheetId}/status`, {
+      status,
+      remarks,
+    });
   } catch (error) {
-    throw new Error(getErrorMessage(error, "Failed to create skill."));
+    throw new Error(getErrorMessage(error, "Failed to update timesheet status."));
   }
 }
-
-export async function getJobDescriptionTemplates(): Promise<JobDescriptionTemplate[]> {
-  try {
-    const response = await nextApiClient.get<{ data: JobDescriptionTemplate[] }>("/api/hr/settings/job-descriptions");
-    return response.data.data;
-  } catch (error) {
-    throw new Error(getErrorMessage(error, "Failed to fetch job descriptions."));
-  }
-}
-
-export async function analyzeJobDescription(payload: { title: string; description: string }): Promise<JobDescriptionAnalysis> {
-  try {
-    const response = await nextApiClient.post<{ data: JobDescriptionAnalysis }>("/api/hr/settings/job-descriptions/analyze", payload);
-    return response.data.data;
-  } catch (error) {
-    throw new Error(getErrorMessage(error, "Failed to analyze job description."));
-  }
-}
-
-export async function createJobDescriptionTemplate(payload: {
-  title: string;
-  jobRoleId?: string | null;
-  description: string;
-  refinedDescription?: string | null;
-  mustHaveSkillIds?: string[];
-  niceToHaveSkillIds?: string[];
-}): Promise<JobDescriptionTemplate> {
-  try {
-    const response = await nextApiClient.post<{ data: JobDescriptionTemplate }>("/api/hr/settings/job-descriptions", payload);
-    return response.data.data;
-  } catch (error) {
-    throw new Error(getErrorMessage(error, "Failed to save job description."));
-  }
-}
-
-export async function getSuggestion(payload: { input: string; kind?: "skill" | "description" }): Promise<TextSuggestionResult> {
-  try {
-    const response = await nextApiClient.post<{ data: TextSuggestionResult }>("/api/hr/settings/suggest", payload);
-    return response.data.data;
-  } catch (error) {
-    throw new Error(getErrorMessage(error, "Failed to get suggestion."));
-  }
-}
-

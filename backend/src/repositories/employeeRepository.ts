@@ -11,16 +11,15 @@ import {
 
 export class EmployeeRepository {
   public static async findByWorkEmail(email: string) {
-    const normalizedEmail = email.trim().toLowerCase();
     return User.findOne({
       where: {
-        [Op.or]: [{ email: normalizedEmail }, { workEmail: normalizedEmail }],
+        [Op.or]: [{ email }, { workEmail: email }],
       },
     });
   }
 
   public static async createEmployee(data: any, transaction: any) {
-    const normalizedEmail = String(data.email || data.workEmail || "").trim().toLowerCase();
+    const normalizedEmail = data.email || data.workEmail;
 
     return User.create(
       {

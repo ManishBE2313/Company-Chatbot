@@ -3,8 +3,7 @@ import os
 import json
 import httpx
 import base64
-import io
-import PyPDF2 
+import fitz
 from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage
@@ -111,12 +110,14 @@ async def process_batch_resumes(job_id: str, folder_url: str):
                         f.write(file_bytes)
                     # ==========================================
                     
-                    # 4. Extract text from the PDF bytes in memory
-                    pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
+                    # 4. Extract text from the first few PDF pages in memory
                     raw_text = ""
-                    # Read up to the first 3 pages to save tokens and find the identity
-                    for page_num in range(min(3, len(pdf_reader.pages))): 
-                        raw_text += pdf_reader.pages[page_num].extract_text() or ""
+                    pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
+                    try:
+                        for page_num in range(min(3, pdf_document.page_count)):
+                            raw_text += pdf_document.load_page(page_num).get_text() or ""
+                    finally:
+                        pdf_document.close()
                     
                     # 5. Extract Identity using ChatGroq (Llama-3)
                     prompt = f"""

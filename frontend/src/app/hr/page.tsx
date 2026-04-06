@@ -18,6 +18,7 @@ import {
   MapPin,
   Users,
   ChevronRight,
+  ClipboardCheck,
 } from "lucide-react";
 import { Job } from "@/types/hr";
 import { useState } from "react";
@@ -50,6 +51,16 @@ export default function HRDashboardPage() {
           {/* Only Admins see Upload CV */}
           {isAdmin && (
             <>
+              <Link href="/hr/timesheets">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-slate-600"
+                >
+                  <ClipboardCheck size={14} />
+                  Review Timesheets
+                </Button>
+              </Link>
               <Button
                 size="sm"
                 variant="outline"

@@ -2,8 +2,18 @@ import { getTransaction, Timesheet, TimesheetEntry } from "../config/database";
 import { TimesheetRepository } from "../repositories/timesheetRepository";
 
 export class TimesheetService {
-  public static async saveTimesheet(employeeEmail: string, form: any) {
-    const employee = await TimesheetRepository.findEmployeeByEmail(employeeEmail);
+  private static readonly ENTRY_DAY_ORDER: Record<string, number> = {
+    Monday: 1,
+    Tuesday: 2,
+    Wednesday: 3,
+    Thursday: 4,
+    Friday: 5,
+    Saturday: 6,
+    Sunday: 7,
+  };
+
+  public static async saveTimesheet(employeeId: string, form: any) {
+    const employee = await TimesheetRepository.findEmployeeById(employeeId);
     if (!employee) {
       throw new Error("Employee not found");
     }
@@ -71,8 +81,8 @@ export class TimesheetService {
     }
   }
 
-  public static async getTimesheetByEmployeeEmail(employeeEmail: string) {
-    const employee = await TimesheetRepository.findEmployeeByEmail(employeeEmail);
+  public static async getTimesheetByEmployeeId(employeeId: string) {
+    const employee = await TimesheetRepository.findEmployeeById(employeeId);
     if (!employee) return null;
 
     const timesheets = await Timesheet.findAll({
@@ -85,5 +95,65 @@ export class TimesheetService {
       employee,
       timesheets,
     };
+  }
+
+  public static async getTimesheetsForReview(claimMonth?: string) {
+    const reviewMonths = await TimesheetRepository.findReviewMonths();
+    const availableMonths = reviewMonths
+      .map((item: any) => item.claimMonth)
+      .filter((value: string | undefined): value is string => Boolean(value));
+
+    const defaultMonth = availableMonths[0] || new Date().toISOString().slice(0, 7);
+    const selectedMonth = claimMonth && availableMonths.includes(claimMonth) ? claimMonth : defaultMonth;
+
+    if (!selectedMonth) {
+      return {
+        availableMonths,
+        selectedMonth: "",
+        timesheets: [],
+      };
+    }
+
+    const timesheets = await TimesheetRepository.findTimesheetsForReview(selectedMonth);
+
+    return {
+      availableMonths,
+      selectedMonth,
+      timesheets: timesheets.map((timesheet: any) => ({
+        id: timesheet.id,
+        employeeId: timesheet.employeeId,
+        employeeName: [timesheet.employee?.firstName, timesheet.employee?.lastName].filter(Boolean).join(" "),
+        employeeEmail: timesheet.employee?.workEmail || timesheet.employee?.email || "",
+        designation: timesheet.employee?.designation || "",
+        weekEnding: timesheet.weekEnding,
+        claimMonth: timesheet.claimMonth,
+        status: timesheet.status,
+        remarks: timesheet.remarks || "",
+        totalHours: timesheet.totalHours,
+        averageHours: timesheet.averageHours,
+        entries: (timesheet.entries || [])
+          .map((entry: any) => ({
+            id: entry.id,
+            dayName: entry.dayName,
+            hours: entry.hours,
+            dayDate: entry.dayDate,
+          }))
+          .sort((a: any, b: any) => {
+            return (
+              (TimesheetService.ENTRY_DAY_ORDER[a.dayName] || Number.MAX_SAFE_INTEGER) -
+              (TimesheetService.ENTRY_DAY_ORDER[b.dayName] || Number.MAX_SAFE_INTEGER)
+            );
+          }),
+      })),
+    };
+  }
+
+  public static async reviewTimesheet(timesheetId: string, status: "approved" | "rejected", remarks?: string) {
+    const updated = await TimesheetRepository.updateTimesheetStatus(timesheetId, {
+      status,
+      remarks: remarks ?? "",
+    });
+
+    return updated.toJSON();
   }
 }

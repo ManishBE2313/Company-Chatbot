@@ -109,7 +109,7 @@ export class EmployeeService {
   }
 
   public static async updateEmployee(id: string, data: any) {
-    const employee = await User.findByPk(id);
+  const employee = await User.findByPk(id);
 
     if (!employee) {
       throw new Error("Employee not found");
@@ -195,6 +195,9 @@ export class EmployeeService {
     return { message: "Employee updated successfully" };
   }
 
+
+
+  //  DELETE EMPLOYEE
   public static async deleteEmployee(id: string) {
     const employee = await User.findByPk(id);
 

@@ -148,6 +148,7 @@ export async function submitTimesheet(empId: string, payload: TimesheetPayload) 
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(payload),
   });
 
