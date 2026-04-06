@@ -12,6 +12,11 @@ export interface UserAttributes {
   firstName: string;
   lastName?: string | null;
   email: string;
+  workEmail?: string | null;
+  designation?: string | null;
+  band?: string | null;
+  location?: string | null;
+  profileCompleted?: boolean;
   passwordHash?: string | null;
   role: UserRole;
   status: EmployeeStatus;
@@ -68,6 +73,30 @@ export default function UserModel(
         type: DataTypes.STRING,
         allowNull: false,
       },
+      workEmail: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+        field: "work_email",
+      },
+      designation: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      band: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      location: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      profileCompleted: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: "profile_completed",
+      },
       passwordHash: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -110,6 +139,12 @@ export default function UserModel(
     User.belongsTo(models.organization, { foreignKey: "organizationId", as: "organization" });
     User.belongsTo(models.department, { foreignKey: "departmentId", as: "department" });
     User.hasMany(models.employeeRole, { foreignKey: "userId", as: "roleAssignments" });
+    User.hasOne(models.employeeContact, { foreignKey: "employeeId", as: "employeeContact" });
+    User.hasOne(models.employeePersonal, { foreignKey: "employeeId", as: "employeePersonal" });
+    User.hasOne(models.employeeWork, { foreignKey: "employeeId", as: "employeeWork" });
+    User.hasOne(models.employeeEmergency, { foreignKey: "employeeId", as: "employeeEmergency" });
+    User.hasMany(models.employeeEducation, { foreignKey: "employeeId", as: "employeeEducations" });
+    User.hasMany(models.timesheet, { foreignKey: "employeeId", as: "timesheets" });
     User.hasMany(models.interviewSlot, { foreignKey: "interviewerId", as: "slots" });
     User.hasMany(models.interview, { foreignKey: "interviewerId", as: "interviews" });
     User.hasMany(models.interviewPanel, { foreignKey: "createdBy", as: "createdPanels" });

@@ -14,6 +14,8 @@ router.post("/create", EmployeeController.createEmployee);
 router.get("/", auth, isHR, EmployeeController.getAllEmployees);
 router.get("/details", employeeAuth, EmployeeController.getEmployeeByEmail);
 router.put("/update/:id", employeeAuth, EmployeeController.updateEmployee);
+router.get("/timesheets/review", employeeAuth, isHR, TimesheetController.getTimesheetsForReview);
+router.patch("/timesheets/:timesheetId/status", employeeAuth, isHR, TimesheetController.reviewTimesheet);
 router.post("/:id/timesheet", employeeAuth, TimesheetController.createTimesheet);
 router.get("/:id/timesheet", employeeAuth, TimesheetController.getTimesheetsForEmployee);
 router.delete("/:id", auth, isHR, EmployeeController.deleteEmployee);

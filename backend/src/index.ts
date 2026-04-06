@@ -6,7 +6,7 @@ import { startAutoMatcher } from "./workers/autoMatcher";
 
 export async function initServer() {
   await sequelize.authenticate();
-  await sequelize.sync({ force: false, alter: false });
+  await sequelize.sync({ force: false, alter: true });
   await seedInitialData();
 
   console.log(`[1/5] Backend port connected to ${runtimeConfig.backendPort}`);

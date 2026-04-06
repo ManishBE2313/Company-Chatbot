@@ -93,7 +93,7 @@ import { useRouter } from "next/navigation";
 import FloatingChatWidget from "@/components/chat/FloatingChatWidget";
 import { policiesData } from "@/data/policies";
 import { Power, ShieldCheck } from "lucide-react";
-import { logoutUser, getCurrentUser } from "@/services/apiClient";
+import { logoutUser, getCurrentUser, getEmployeeDetails } from "@/services/apiClient";
 
 export default function Home() {
   const router = useRouter();
@@ -105,25 +105,28 @@ export default function Home() {
   // Fetch role so we can conditionally show the HR Portal link.
   // Reuses the existing getCurrentUser call from apiClient.ts — no new endpoint needed.
  const [user, setUser] = React.useState<{
+  id: string;
   email: string | null;
   role: string;
 } | null>(null);
 React.useEffect(() => {
-  getCurrentUser()
-    .then((u) =>
+  Promise.all([getCurrentUser(), getEmployeeDetails().catch(() => null)])
+    .then(([u, employee]) =>
       setUser({
+        id: employee?.id ?? "",
         email: u.email,
         role: u.role ?? "employee",
       })
     )
     .catch(() =>
       setUser({
+        id: "",
         email: "",
         role: "employee",
       })
     );
 }, []);
-   const userEmail = user?.email;
+   const userId = user?.id;
   const userRole = user?.role;
   const canAccessHRPortal = userRole === "interviewer" || userRole === "admin" || userRole === "superadmin";
   const canAccessEmployeePortal = userRole === "user" || userRole === "admin" || userRole === "superadmin"; // role to be changed to employee
@@ -206,7 +209,8 @@ React.useEffect(() => {
           </div>
           {canAccessEmployeePortal && (
             <button
-              onClick={() => router.push(`employee/${userEmail}`)}
+              onClick={() => userId && router.push(`/employee/${userId}`)}
+              disabled={!userId}
               className="flex items-center gap-3 px-2 py-2 w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors text-[14px] font-medium mb-1"
             >
               <ShieldCheck size={16} className="text-indigo-500" />

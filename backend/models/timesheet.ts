@@ -74,7 +74,7 @@ export default function TimesheetModel(
   ) as TimesheetModelType;
 
   Timesheet.associate = (models: any) => {
-    Timesheet.belongsTo(models.employee, {
+    Timesheet.belongsTo(models.user, {
       foreignKey: "employeeId",
       as: "employee",
     });

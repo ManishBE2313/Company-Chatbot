@@ -1,6 +1,7 @@
-import { User } from "../config/database";
+import { Op } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../constants/system";
 import {
-  Employee,
+  User,
   EmployeeContact,
   EmployeePersonal,
   EmployeeWork,
@@ -9,30 +10,36 @@ import {
 } from "../config/database";
 
 export class EmployeeRepository {
-public static async findByWorkEmail(email: string) {
-  console.log("yaha")
-    return await User.findOne({
-         where: { email : email },
+  public static async findByWorkEmail(email: string) {
+    return User.findOne({
+      where: {
+        [Op.or]: [{ email }, { workEmail: email }],
+      },
     });
   }
-  // 🔹 CREATE MAIN EMPLOYEE
+
   public static async createEmployee(data: any, transaction: any) {
-    return Employee.create(
+    const normalizedEmail = data.email || data.workEmail;
+
+    return User.create(
       {
+        organizationId: data.organizationId || DEFAULT_ORGANIZATION_ID,
         firstName: data.firstName,
         lastName: data.lastName,
+        email: normalizedEmail,
+        workEmail: data.workEmail || normalizedEmail,
         designation: data.designation,
         band: data.band,
         location: data.location,
-        workEmail: data.workEmail,
+        profileCompleted: data.profileCompleted ?? false,
+        role: data.role || "user",
+        status: data.status || "active",
+        isActive: data.isActive ?? true,
       },
       { transaction }
     );
   }
 
-
-
-  // 🔹 CONTACT
   public static async createContact(
     employeeId: string,
     contact: any,
@@ -50,9 +57,6 @@ public static async findByWorkEmail(email: string) {
     );
   }
 
-
-
-  // 🔹 PERSONAL
   public static async createPersonal(
     employeeId: string,
     personal: any,
@@ -74,9 +78,6 @@ public static async findByWorkEmail(email: string) {
     );
   }
 
-
-
-  // 🔹 WORK
   public static async createWork(
     employeeId: string,
     work: any,
@@ -93,9 +94,6 @@ public static async findByWorkEmail(email: string) {
     );
   }
 
-
-
-  // 🔹 EMERGENCY
   public static async createEmergency(
     employeeId: string,
     emergency: any,
@@ -112,9 +110,6 @@ public static async findByWorkEmail(email: string) {
     );
   }
 
-
-
-  // 🔹 EDUCATION (BULK)
   public static async createEducation(
     employeeId: string,
     educationList: any[],
@@ -131,36 +126,27 @@ public static async findByWorkEmail(email: string) {
     return EmployeeEducation.bulkCreate(records, { transaction });
   }
 
-
-
-  // 🔹 FIND BY ID (with relations)
   public static async findById(id: string) {
-    return Employee.findByPk(id, {
+    return User.findByPk(id, {
       include: [
-        { model: EmployeeContact },
-        { model: EmployeePersonal },
-        { model: EmployeeWork },
-        { model: EmployeeEmergency },
-        { model: EmployeeEducation },
+        { model: EmployeeContact, as: "employeeContact" },
+        { model: EmployeePersonal, as: "employeePersonal" },
+        { model: EmployeeWork, as: "employeeWork" },
+        { model: EmployeeEmergency, as: "employeeEmergency" },
+        { model: EmployeeEducation, as: "employeeEducations" },
       ],
     });
   }
 
-
-
-  // 🔹 FIND ALL
   public static async findAll() {
-    return Employee.findAll({
-      attributes: ["id", "firstName", "lastName", "designation", "workEmail"],
+    return User.findAll({
+      attributes: ["id", "firstName", "lastName", "email", "workEmail", "designation", "band", "location", "profileCompleted"],
       order: [["createdAt", "DESC"]],
     });
   }
 
-
-
-  // 🔹 UPDATE
   public static async updateEmployee(id: string, data: any) {
-    const employee = await Employee.findByPk(id);
+    const employee = await User.findByPk(id);
 
     if (!employee) {
       throw new Error("Employee not found");
@@ -170,11 +156,8 @@ public static async findByWorkEmail(email: string) {
     return employee;
   }
 
-
-
-  // 🔹 DELETE
   public static async deleteEmployee(id: string) {
-    const employee = await Employee.findByPk(id);
+    const employee = await User.findByPk(id);
 
     if (!employee) {
       throw new Error("Employee not found");

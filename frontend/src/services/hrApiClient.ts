@@ -15,6 +15,7 @@ import {
   JobFormCatalog,
   EmployeeListItem,
   RoleOption,
+  TimesheetReviewResponse,
 } from "@/types/hr";
 
 const fastApiClient = axios.create({
@@ -26,6 +27,14 @@ const fastApiClient = axios.create({
 });
 
 const nextApiClient = axios.create({
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+const employeeApiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL2 || "http://localhost:3000",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -306,5 +315,27 @@ export async function updateEmployeeRoles(
     );
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to update employee roles."));
+  }
+}
+
+export async function getTimesheetsForReview(claimMonth?: string): Promise<TimesheetReviewResponse> {
+  try {
+    const response = await employeeApiClient.get<{ data: TimesheetReviewResponse }>("/api/employee/timesheets/review", {
+      params: claimMonth ? { claimMonth } : undefined,
+    });
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch timesheets for review."));
+  }
+}
+
+export async function reviewTimesheet(timesheetId: string, status: "approved" | "rejected", remarks?: string): Promise<void> {
+  try {
+    await employeeApiClient.patch(`/api/employee/timesheets/${timesheetId}/status`, {
+      status,
+      remarks,
+    });
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to update timesheet status."));
   }
 }

@@ -272,3 +272,33 @@ export interface RoleOption {
   name: string;
   description?: string | null;
 }
+
+export type TimesheetReviewStatus = "pending" | "submitted" | "approved" | "rejected";
+
+export interface TimesheetReviewEntry {
+  id: string;
+  dayName: string;
+  hours: number;
+  dayDate?: string | null;
+}
+
+export interface TimesheetReviewItem {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  designation?: string;
+  claimMonth: string;
+  weekEnding: string;
+  status: TimesheetReviewStatus;
+  remarks?: string;
+  totalHours: number;
+  averageHours: number;
+  entries: TimesheetReviewEntry[];
+}
+
+export interface TimesheetReviewResponse {
+  availableMonths: string[];
+  selectedMonth: string;
+  timesheets: TimesheetReviewItem[];
+}

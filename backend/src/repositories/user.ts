@@ -17,6 +17,7 @@ export class UserRepository {
     if (existingUser) {
       existingUser.firstName = payload.firstName?.trim() || existingUser.firstName;
       existingUser.lastName = payload.lastName?.trim() || existingUser.lastName || null;
+      existingUser.workEmail = existingUser.workEmail || email;
       existingUser.lastLoginAt = new Date();
       existingUser.organizationId = existingUser.organizationId || DEFAULT_ORGANIZATION_ID;
       await existingUser.save();
@@ -27,6 +28,7 @@ export class UserRepository {
     const user = await User.create({
       organizationId: DEFAULT_ORGANIZATION_ID,
       email,
+      workEmail: email,
       firstName: payload.firstName?.trim() || fallbackFirstName,
       lastName: payload.lastName?.trim() || null,
       lastLoginAt: new Date(),

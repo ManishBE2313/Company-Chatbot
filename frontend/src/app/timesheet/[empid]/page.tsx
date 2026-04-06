@@ -2,11 +2,9 @@
 'use client'
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
-import { submitTimesheet, TimesheetPayload } from "@/services/apiClient";
+import { getEmployeeDetails, submitTimesheet, TimesheetPayload } from "@/services/apiClient";
 
 // ── Types ─────────────────────────────
-
-type Status = "pending" | "submitted" | "approved" | "rejected" | "";
 
 interface DailyHours {
   day1: string;
@@ -23,7 +21,6 @@ interface FormState {
   weekEnding: string;
   claimMonth: string;
   hours: DailyHours;
-  status: Status;
   remarks: string;
 }
 
@@ -49,6 +46,23 @@ const month = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
+function getFridayOptions(claimMonth: string) {
+  const [year, monthValue] = claimMonth.split("-").map(Number);
+  if (!year || !monthValue) return [];
+
+  const current = new Date(year, monthValue - 1, 1);
+  const fridays: string[] = [];
+
+  while (current.getMonth() === monthValue - 1) {
+    if (current.getDay() === 5) {
+      fridays.push(current.toISOString().split("T")[0]);
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  return fridays;
+}
+
 function calcStats(hours: DailyHours) {
   const values = Object.values(hours).map(v => parseFloat(v) || 0);
   const total = values.reduce((a, b) => a + b, 0);
@@ -61,19 +75,38 @@ function calcStats(hours: DailyHours) {
 export default function Timesheet() {
 
   const params = useParams();
-  const rawEmployeeEmail = params?.empid as string || "employee@example.com";
-  const employeeEmail = decodeURIComponent(rawEmployeeEmail);
+  const rawEmployeeId = params?.empid as string || "";
+  const employeeId = decodeURIComponent(rawEmployeeId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const initialMonth = month();
+  const initialFridayOptions = getFridayOptions(initialMonth);
 
   const [form, setForm] = useState<FormState>({
-    employeeEmail,
-    weekEnding: today(),
-    claimMonth: month(),
+    employeeEmail: "",
+    weekEnding: initialFridayOptions[0] || today(),
+    claimMonth: initialMonth,
     hours: emptyHours(),
-    status: "",
     remarks: "",
   });
 
   const { total, avg } = calcStats(form.hours);
+  const fridayOptions = getFridayOptions(form.claimMonth);
+
+  React.useEffect(() => {
+    const loadEmployee = async () => {
+      try {
+        const employee = await getEmployeeDetails();
+        setForm((prev) => ({
+          ...prev,
+          employeeEmail: employee?.workEmail || employee?.email || "",
+        }));
+      } catch (error) {
+        console.error("Failed to load employee details for timesheet", error);
+      }
+    };
+
+    void loadEmployee();
+  }, []);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -94,26 +127,31 @@ export default function Timesheet() {
       weekEnding: form.weekEnding,
       claimMonth: form.claimMonth,
       hours: form.hours,
-      status: form.status,
+      status: "submitted",
       remarks: form.remarks,
     };
 
     try {
-      await submitTimesheet(employeeEmail, payload);
+      setIsSubmitting(true);
+      await submitTimesheet(employeeId, payload);
       alert("Timesheet submitted successfully.");
     } catch (error) {
       console.error("Timesheet submit failed", error);
-      alert("Failed to submit timesheet. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to submit timesheet. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleClear = () => {
+    const resetMonth = month();
+    const resetFridayOptions = getFridayOptions(resetMonth);
+
     setForm({
-      employeeEmail,
-      weekEnding: today(),
-      claimMonth: month(),
+      employeeEmail: "",
+      weekEnding: resetFridayOptions[0] || today(),
+      claimMonth: resetMonth,
       hours: emptyHours(),
-      status: "",
       remarks: "",
     });
   };
@@ -182,7 +220,7 @@ export default function Timesheet() {
           color: "#3730a3",
           fontWeight: 500
         }}>
-          Employee Email: {employeeEmail}
+          Employee Id: {employeeId}
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -192,22 +230,39 @@ export default function Timesheet() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
 
               <div>
-                <p style={label}>Week Ending</p>
-                <input type="date" style={input}
-                  value={form.weekEnding}
-                  onChange={(e) => setField("weekEnding", e.target.value)}
-                />
-              </div>
-
-              <div>
                 <p style={label}>Month</p>
                 <input type="month" style={input}
                   value={form.claimMonth}
-                  onChange={(e) => setField("claimMonth", e.target.value)}
+                  onChange={(e) => {
+                    const nextMonth = e.target.value;
+                    const nextFridayOptions = getFridayOptions(nextMonth);
+
+                    setForm((prev) => ({
+                      ...prev,
+                      claimMonth: nextMonth,
+                      weekEnding:
+                        nextFridayOptions.includes(prev.weekEnding) ? prev.weekEnding : nextFridayOptions[0] || "",
+                    }));
+                  }}
                 />
               </div>
 
             </div>
+          </div>
+
+          <div style={card}>
+            <p style={label}>Week Ending</p>
+            <select
+              style={input}
+              value={form.weekEnding}
+              onChange={(e) => setField("weekEnding", e.target.value)}
+            >
+              {fridayOptions.map((date) => (
+                <option key={date} value={date}>
+                  {date}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Daily Hours */}
@@ -250,30 +305,13 @@ export default function Timesheet() {
             </div>
           </div>
 
-          {/* Status */}
           <div style={card}>
-            <p style={{ marginBottom: 10, fontWeight: 600 }}>Status</p>
-
-            <select
+            <p style={label}>Remarks</p>
+            <input
               style={input}
-              value={form.status}
-              onChange={(e) => setField("status", e.target.value as Status)}
-            >
-              <option value="">Select status</option>
-              <option value="pending">Pending</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-
-            <div style={{ marginTop: 10 }}>
-              <p style={label}>Remarks</p>
-              <input
-                style={input}
-                value={form.remarks}
-                onChange={(e) => setField("remarks", e.target.value)}
-              />
-            </div>
+              value={form.remarks}
+              onChange={(e) => setField("remarks", e.target.value)}
+            />
           </div>
 
           {/* Buttons */}
@@ -281,8 +319,8 @@ export default function Timesheet() {
             <button type="button" style={buttonSecondary} onClick={handleClear}>
               Clear
             </button>
-            <button type="submit" style={buttonPrimary}>
-              Submit
+            <button type="submit" style={buttonPrimary} disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit"}
             </button>
           </div>
 
