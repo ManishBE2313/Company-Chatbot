@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { createJob, getJobDescriptionTemplates, getJobFormCatalog, updateJob } from "@/services/hrApiClient";
+import { createJob, getJobFormCatalog, updateJob } from "@/services/hrApiClient";
 import { CreateJobPayload, Job, JobDescriptionTemplate, JobFormCatalog } from "@/types/hr";
 import { useHRCurrentUser } from "@/hooks/useHRData";
 import { Button } from "@/components/ui/Button";
