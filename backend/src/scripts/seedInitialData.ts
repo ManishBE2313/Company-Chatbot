@@ -1,4 +1,4 @@
-﻿import { QueryTypes } from "sequelize";
+import { QueryTypes } from "sequelize";
 import { sequelize, Organization, Department, Location, AccessRole, Skill, JobRole, JobRoleSkill, Employee, EmployeeRole } from "../config/database";
 import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_NAME, PRIMARY_ROLE_RANK } from "../constants/system";
 import { seedDepartments, seedJobRoles, seedLocations, seedRoleNames, seedSkills } from "../data/initialCatalog";
@@ -156,7 +156,7 @@ async function migrateLegacyUsersIfNeeded() {
   }
 
   const legacyUsers = await sequelize.query(
-    "SELECT id, first_name AS firstName, last_name AS lastName, email, role, last_login_at AS lastLoginAt, is_active AS isActive, createdAt, updatedAt FROM users",
+    "SELECT id, first_name AS firstName, last_name AS lastName, email, role, is_active AS isActive, createdAt, updatedAt FROM users",
     { type: QueryTypes.SELECT }
   ) as any[];
 
@@ -171,9 +171,7 @@ async function migrateLegacyUsersIfNeeded() {
         email: legacyUser.email,
         role: PRIMARY_ROLE_RANK.includes(legacyUser.role) ? legacyUser.role : "user",
         status: legacyUser.isActive === false ? "inactive" : "active",
-        isActive: legacyUser.isActive !== false,
-        lastLoginAt: legacyUser.lastLoginAt || null,
-      },
+        isActive: legacyUser.isActive !== false,      },
     });
 
     if (!employee.get("organizationId")) {
@@ -257,3 +255,5 @@ if (require.main === module) {
     }
   })();
 }
+
+

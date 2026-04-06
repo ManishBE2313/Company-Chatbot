@@ -1,9 +1,11 @@
-﻿import express, { NextFunction, Request, Response } from "express";
+import cookieParser from "cookie-parser";
+import express, { NextFunction, Request, Response } from "express";
 import authRouter from "./routes/auth";
 import candidateRouter from "./routes/candidate";
 import hrApplicationRouter from "./routes/hr/application";
 import hrJobRouter from "./routes/hr/job";
 import hrCatalogRouter from "./routes/hr/catalog";
+import hrSettingsRouter from "./routes/hr/settings";
 import userRouter from "./routes/hr/user";
 import webhookRouter from "./routes/webhook";
 import jobRouter from "./routes/job";
@@ -13,11 +15,14 @@ import notificationRouter from "./routes/notification";
 import interviewSlotRouter from "./routes/interviewSlot";
 import interviewRouter from "./routes/interview";
 import EmployeeRouter from "./routes/employee";
-import cookieParser from "cookie-parser";
+
 import cors from "cors";
 import batchIngestRouter from "./routes/hr/batchIngest";
 import dotenv from "dotenv";
+import traceabilityRoutes from "./routes/traceability";
+import { models } from "./config/database";
 import { startSlotSyncCron } from "./cron/syncInterviewSlots";
+
 dotenv.config();
 
 const app = express();
@@ -31,6 +36,13 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 startSlotSyncCron();
+app.use(cookieParser());
+
+app.use((req: any, _res, next) => {
+  req.models = models;
+  next();
+});
+
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok" });
 });
@@ -38,8 +50,10 @@ app.get("/health", (_req: Request, res: Response) => {
 app.use("/api/auth", authRouter);
 app.use("/api/candidates", candidateRouter);
 app.use("/api/hr/applications", hrApplicationRouter);
+app.use("/api/traceability", traceabilityRoutes);
 app.use("/api/hr/jobs", hrJobRouter);
 app.use("/api/hr/catalog", hrCatalogRouter);
+app.use("/api/hr/settings", hrSettingsRouter);
 app.use("/api/hr/user", userRouter);
 app.use("/api/webhooks", webhookRouter);
 app.use("/api/jobs", jobRouter);

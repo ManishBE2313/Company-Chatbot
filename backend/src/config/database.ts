@@ -5,6 +5,7 @@ import LocationModel from "../../models/location";
 import AccessRoleModel from "../../models/accessRole";
 import EmployeeRoleModel from "../../models/employeeRole";
 import SkillModel from "../../models/skill";
+import JobDescriptionTemplateModel from "../../models/jobDescriptionTemplate";
 import JobRoleModel from "../../models/jobRole";
 import JobRoleSkillModel from "../../models/jobRoleSkill";
 import InterviewPanelModel from "../../models/interviewPanel";
@@ -27,6 +28,9 @@ import EmployeeEmergencyModel from "../../models/employeeEmergency";
 import EmployeeEducationModel from "../../models/employeeEducation";
 import TimesheetModel from "../../models/timesheet";
 import TimesheetEntryModel from "../../models/timesheetEntry";
+
+import CandidateTraceModel from "../../models/candidateTrace";
+import JobTraceabilityModel from "../../models/jobTraceability";
 
 const isProduction = runtimeConfig.nodeEnv.toLowerCase() === "production";
 
@@ -56,6 +60,7 @@ export const Location = LocationModel(sequelize);
 export const AccessRole = AccessRoleModel(sequelize);
 export const EmployeeRole = EmployeeRoleModel(sequelize);
 export const Skill = SkillModel(sequelize);
+export const JobDescriptionTemplate = JobDescriptionTemplateModel(sequelize);
 export const JobRole = JobRoleModel(sequelize);
 export const JobRoleSkill = JobRoleSkillModel(sequelize);
 export const InterviewPanel = InterviewPanelModel(sequelize);
@@ -77,6 +82,9 @@ export const EmployeeEmergency = EmployeeEmergencyModel(sequelize);
 export const EmployeeEducation = EmployeeEducationModel(sequelize);
 export const Timesheet = TimesheetModel(sequelize);
 export const TimesheetEntry = TimesheetEntryModel(sequelize);
+export const CandidateTrace = CandidateTraceModel(sequelize);
+export const JobTraceability = JobTraceabilityModel(sequelize);
+
 const models = {
   organization: Organization,
   department: Department,
@@ -84,6 +92,7 @@ const models = {
   accessRole: AccessRole,
   employeeRole: EmployeeRole,
   skill: Skill,
+  jobDescriptionTemplate: JobDescriptionTemplate,
   jobRole: JobRole,
   jobRoleSkill: JobRoleSkill,
   interviewPanel: InterviewPanel,
@@ -105,6 +114,8 @@ const models = {
   employeeEducation: EmployeeEducation,
   timesheet: Timesheet,
   timesheetEntry: TimesheetEntry,
+  // candidateTrace: CandidateTrace,
+  // jobTraceability: JobTraceability,
 };
 for (const model of Object.values(models) as Array<any>) {
   if (typeof model.associate === "function") {
@@ -119,3 +130,4 @@ export type MainDbModelName = keyof typeof models;
 export function getMainDbModel<T extends MainDbModelName>(modelName: T) {
   return models[modelName];
 }
+export {models};

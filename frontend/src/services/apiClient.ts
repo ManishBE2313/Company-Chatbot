@@ -3,6 +3,9 @@ import { ChatApiRequest } from "@/types/chat";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL2 || "http://localhost:3000";
+const CHAT_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:8000";
+
 export interface CurrentUser {
   email: string | null;
   role?: string;
@@ -19,7 +22,7 @@ export async function streamChatMessage(
   onChunk: (chunk: string) => void
 ): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    const response = await fetch(`${CHAT_API_BASE_URL}/api/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,7 +85,7 @@ export async function streamChatMessage(
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
-  const response = await fetch(`${API_BASE_URL}/api/user/me`, {
+  const response = await fetch(`${CHAT_API_BASE_URL}/api/user/me`, {
     method: "GET",
     credentials: "include",
     cache: "no-store",
@@ -111,7 +114,7 @@ export async function getEmployeeDetails() {
   return data.data; // employee object
 }
 export async function logoutUser(): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+  const response = await fetch(`${AUTH_API_BASE_URL}/api/auth/logout`, {
     method: "POST",
     credentials: "include",
   });

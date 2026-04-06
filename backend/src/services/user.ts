@@ -1,4 +1,4 @@
-﻿import Errors from "../errors";
+import Errors from "../errors";
 import { CatalogRepository, UserRepository } from "../repositories/user";
 import { UserRole } from "../../models/user";
 import { canAssignRoles, normalizePrimaryRole } from "../utils/roleManagement";
@@ -9,9 +9,48 @@ export interface SyncUserLoginPayload {
   lastName?: string | null;
 }
 
+export interface SyncUserFromAuthPayload {
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  role?: UserRole | null;
+}
+
 export class UserService {
   public static async syncUserLogin(payload: SyncUserLoginPayload) {
     return UserRepository.upsertUser(payload);
+  }
+
+  public static async syncUserFromCentralAuth(payload: SyncUserFromAuthPayload) {
+    const result = await UserRepository.syncFromAuthClaims({
+      email: payload.email,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      role: payload.role || "user",
+      preserveExistingRole: true,
+    });
+
+    const assignedRoles = await UserRepository.findAssignedRoleNames(result.user.id);
+    const roleNames = assignedRoles.length
+      ? assignedRoles
+      : [result.user.role === "user" ? "employee" : result.user.role, "employee"];
+
+    await UserRepository.ensureRoleAssignments(result.user.id, roleNames);
+    const refreshedRoleNames = await UserRepository.findAssignedRoleNames(result.user.id);
+
+    if (!refreshedRoleNames.length && result.user.role === "user") {
+      result.user.role = "user";
+      await result.user.save();
+    } else if (refreshedRoleNames.length) {
+      result.user.role = normalizePrimaryRole(refreshedRoleNames);
+      await result.user.save();
+    }
+
+    return {
+      user: result.user,
+      roles: await UserRepository.findAssignedRoleNames(result.user.id),
+      created: result.created,
+    };
   }
 
   public static async getUserRoleByEmail(email: string): Promise<UserRole> {

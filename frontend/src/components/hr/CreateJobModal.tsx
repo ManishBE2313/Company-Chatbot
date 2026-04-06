@@ -1,24 +1,34 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
-import { useCreateJob } from "@/hooks/useHRData";
-import { CreateJobPayload, JobFormCatalog } from "@/types/hr";
-import { getJobFormCatalog } from "@/services/hrApiClient";
+import { createJob, getJobDescriptionTemplates, getJobFormCatalog, updateJob } from "@/services/hrApiClient";
+import { CreateJobPayload, Job, JobDescriptionTemplate, JobFormCatalog } from "@/types/hr";
+import { useHRCurrentUser } from "@/hooks/useHRData";
 import { Button } from "@/components/ui/Button";
+import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 import { X, Sparkles } from "lucide-react";
+import { showToast } from "@/components/ui/Toast";
 
 interface CreateJobModalProps {
   onClose: () => void;
   onCreated: () => void;
+  mode?: "create" | "edit";
+  jobToEdit?: Job | null;
 }
 
 export const CreateJobModal: React.FC<CreateJobModalProps> = ({
   onClose,
   onCreated,
+  mode = "create",
+  jobToEdit = null,
 }) => {
+  const { user } = useHRCurrentUser();
   const [catalog, setCatalog] = React.useState<JobFormCatalog | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = React.useState(true);
   const [catalogError, setCatalogError] = React.useState<string | null>(null);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [templates, setTemplates] = React.useState<JobDescriptionTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = React.useState("");
 
   const [jobRoleId, setJobRoleId] = React.useState("");
   const [departmentId, setDepartmentId] = React.useState("");
@@ -39,21 +49,22 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
   const [mustHaveSkillIds, setMustHaveSkillIds] = React.useState<string[]>([]);
   const [niceToHaveSkillIds, setNiceToHaveSkillIds] = React.useState<string[]>([]);
   const [notes, setNotes] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const { submit, isLoading, error } = useCreateJob(() => {
-    onCreated();
-    onClose();
-  });
+  const hydratedFromEditRef = React.useRef(false);
 
   React.useEffect(() => {
     const loadCatalog = async () => {
       setIsCatalogLoading(true);
       setCatalogError(null);
       try {
-        const data = await getJobFormCatalog();
+        const [data, savedTemplates] = await Promise.all([getJobFormCatalog(), getJobDescriptionTemplates()]);
         setCatalog(data);
-        if (data.departments[0]) setDepartmentId((current) => current || data.departments[0].id);
-        if (data.locations[0]) setLocationId((current) => current || data.locations[0].id);
+        setTemplates(savedTemplates);
+        if (mode === "create") {
+          if (data.departments[0]) setDepartmentId((current) => current || data.departments[0].id);
+          if (data.locations[0]) setLocationId((current) => current || data.locations[0].id);
+        }
       } catch (catalogLoadError) {
         setCatalogError(catalogLoadError instanceof Error ? catalogLoadError.message : "Failed to load job form data.");
       } finally {
@@ -62,7 +73,35 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     };
 
     void loadCatalog();
-  }, []);
+  }, [mode]);
+
+  React.useEffect(() => {
+    if (!catalog || mode !== "edit" || !jobToEdit || hydratedFromEditRef.current) {
+      return;
+    }
+
+    const requirements = jobToEdit.criteria?.requirements;
+    hydratedFromEditRef.current = true;
+    setJobRoleId(jobToEdit.jobRoleId || "");
+    setDepartmentId(jobToEdit.departmentId || "");
+    setLocationId(jobToEdit.locationId || "");
+    setPanelId(jobToEdit.panelId || "");
+    setHeadcount(jobToEdit.headcount || 1);
+    setEmploymentType(jobToEdit.employmentType || "FULL_TIME");
+    setWorkModel(jobToEdit.workModel || "HYBRID");
+    setSeniorityLevel(jobToEdit.seniorityLevel || "Mid");
+    setExperienceMin(jobToEdit.experienceMin ?? Number(requirements?.minYearsExperience ?? 0));
+    setExperienceMax(jobToEdit.experienceMax ?? Number(requirements?.maxYearsExperience ?? 0));
+    setSalaryMin(jobToEdit.salaryMin ?? "");
+    setSalaryMax(jobToEdit.salaryMax ?? "");
+    setCurrency(jobToEdit.currency || "USD");
+    setPayFrequency(jobToEdit.payFrequency || "YEARLY");
+    setSalaryVisibility(jobToEdit.salaryVisibility || "PUBLIC");
+    setEducationLevel(typeof requirements?.educationLevel === "string" ? requirements.educationLevel : "Bachelor's");
+    setMustHaveSkillIds(Array.isArray(requirements?.mustHaveSkillIds) ? requirements.mustHaveSkillIds as string[] : []);
+    setNiceToHaveSkillIds(Array.isArray(requirements?.niceToHaveSkillIds) ? requirements.niceToHaveSkillIds as string[] : []);
+    setNotes(typeof requirements?.notes === "string" ? requirements.notes : "");
+  }, [catalog, jobToEdit, mode]);
 
   const selectedJobRole = React.useMemo(
     () => catalog?.jobRoles.find((role) => role.id === jobRoleId) || null,
@@ -79,8 +118,28 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     [catalog, locationId]
   );
 
+  const selectedTemplate = React.useMemo(
+    () => templates.find((template) => template.id === selectedTemplateId) || null,
+    [selectedTemplateId, templates]
+  );
+
+  React.useEffect(() => {
+    if (!selectedTemplate) {
+      return;
+    }
+
+    setJobRoleId(selectedTemplate.jobRoleId || "");
+    setMustHaveSkillIds(selectedTemplate.mustHaveSkillIds || []);
+    setNiceToHaveSkillIds(selectedTemplate.niceToHaveSkillIds || []);
+    setNotes(selectedTemplate.refinedDescription || selectedTemplate.description || "");
+  }, [selectedTemplate]);
+
   React.useEffect(() => {
     if (!selectedJobRole) {
+      return;
+    }
+
+    if (mode === "edit" && jobToEdit?.jobRoleId === selectedJobRole.id && hydratedFromEditRef.current) {
       return;
     }
 
@@ -88,10 +147,14 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     setExperienceMin(selectedJobRole.defaultExperienceMin ?? 2);
     setExperienceMax(selectedJobRole.defaultExperienceMax ?? 5);
 
+    if (selectedTemplate && selectedTemplate.jobRoleId === selectedJobRole.id) {
+      return;
+    }
+
     const roleSkills = selectedJobRole.roleSkills || [];
     setMustHaveSkillIds(roleSkills.filter((roleSkill) => roleSkill.isMandatory).map((roleSkill) => roleSkill.skillId));
     setNiceToHaveSkillIds(roleSkills.filter((roleSkill) => !roleSkill.isMandatory).map((roleSkill) => roleSkill.skillId));
-  }, [selectedJobRole]);
+  }, [jobToEdit?.jobRoleId, mode, selectedJobRole, selectedTemplate]);
 
   const getSkillName = React.useCallback((skillId: string) => {
     return catalog?.skills.find((skill) => skill.id === skillId)?.name || skillId;
@@ -127,7 +190,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
     [catalog, niceToHaveSkillIds]
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!catalog || !selectedJobRole || !selectedDepartment || !selectedLocation) {
@@ -165,8 +228,41 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
       },
     };
 
-    submit(payload);
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      if (mode === "edit" && jobToEdit) {
+        await updateJob(jobToEdit.id, payload, user?.email);
+        showToast({
+          type: "success",
+          mainText: "Job updated",
+          text: "The draft details were updated successfully.",
+        });
+      } else {
+        await createJob(payload, user?.email);
+        showToast({
+          type: "success",
+          mainText: "Job created",
+          text: "The job was created and the AI setup has started.",
+        });
+      }
+
+      onCreated();
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : mode === "edit" ? "Failed to update job." : "Failed to create job.";
+      setSubmitError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const modalTitle = mode === "edit" ? "Edit Job" : "Create New Job";
+  const modalSubtitle = mode === "edit"
+    ? "Update the requisition details and keep the HR review flow moving."
+    : "Structured requisition setup with seeded titles, skills, and locations.";
+  const submitLabel = mode === "edit" ? "Save Changes" : "Create Job";
 
   return (
     <>
@@ -176,8 +272,8 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
         <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
             <div>
-              <h2 className="text-[17px] font-semibold text-slate-800">Create New Job</h2>
-              <p className="mt-1 text-[12px] text-slate-400">Structured requisition setup with seeded titles, skills, and locations.</p>
+              <h2 className="text-[17px] font-semibold text-slate-800">{modalTitle}</h2>
+              <p className="mt-1 text-[12px] text-slate-400">{modalSubtitle}</p>
             </div>
             <button onClick={onClose} className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
               <X size={18} />
@@ -186,7 +282,7 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
 
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto bg-slate-50 px-6 py-6">
             {isCatalogLoading ? (
-              <div className="flex items-center justify-center py-20 text-slate-400">Loading job form catalog...</div>
+              <div className="flex items-center justify-center py-20 text-slate-400"><AsanaSpinner size="md" /></div>
             ) : catalogError ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">{catalogError}</div>
             ) : (
@@ -198,6 +294,14 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
                       Role Setup
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
+                      <Field label="Saved JD Template">
+                        <select className={inputCls} value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)}>
+                          <option value="">No template selected</option>
+                          {templates.map((template) => (
+                            <option key={template.id} value={template.id}>{template.title}</option>
+                          ))}
+                        </select>
+                      </Field>
                       <Field label="Job Title" required>
                         <select className={inputCls} value={jobRoleId} onChange={(e) => setJobRoleId(e.target.value)} required>
                           <option value="">Select job title</option>
@@ -276,14 +380,14 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     </Field>
                     <Field label="Seniority Level">
                       <select className={inputCls} value={seniorityLevel} onChange={(e) => setSeniorityLevel(e.target.value)}>
-                        {['Junior', 'Mid', 'Senior', 'Lead', 'Staff', 'Principal'].map((level) => (
+                        {["Junior", "Mid", "Senior", "Lead", "Staff", "Principal"].map((level) => (
                           <option key={level} value={level}>{level}</option>
                         ))}
                       </select>
                     </Field>
                     <Field label="Education Level">
                       <select className={inputCls} value={educationLevel} onChange={(e) => setEducationLevel(e.target.value)}>
-                        {['Any', 'High School', "Bachelor's", "Master's", 'PhD'].map((level) => (
+                        {["Any", "High School", "Bachelor's", "Master's", "PhD"].map((level) => (
                           <option key={level} value={level}>{level}</option>
                         ))}
                       </select>
@@ -302,10 +406,10 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
                       </select>
                     </Field>
                     <Field label="Salary Min">
-                      <input className={inputCls} type="number" min={0} value={salaryMin} onChange={(e) => setSalaryMin(e.target.value === '' ? '' : Number(e.target.value))} />
+                      <input className={inputCls} type="number" min={0} value={salaryMin} onChange={(e) => setSalaryMin(e.target.value === "" ? "" : Number(e.target.value))} />
                     </Field>
                     <Field label="Salary Max">
-                      <input className={inputCls} type="number" min={0} value={salaryMax} onChange={(e) => setSalaryMax(e.target.value === '' ? '' : Number(e.target.value))} />
+                      <input className={inputCls} type="number" min={0} value={salaryMax} onChange={(e) => setSalaryMax(e.target.value === "" ? "" : Number(e.target.value))} />
                     </Field>
                     <Field label="Pay Frequency">
                       <select className={inputCls} value={payFrequency} onChange={(e) => setPayFrequency(e.target.value as typeof payFrequency)}>
@@ -355,15 +459,15 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
                   </Field>
                 </div>
 
-                {error && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">{error}</p>}
+                {submitError && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">{submitError}</p>}
               </div>
             )}
           </form>
 
           <div className="flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4">
             <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-            <Button size="sm" className="bg-indigo-600 text-white hover:bg-indigo-700" isLoading={isLoading} onClick={handleSubmit as never} disabled={isCatalogLoading || !catalog || !jobRoleId}>
-              Create Job
+            <Button size="sm" className="bg-indigo-600 text-white hover:bg-indigo-700" isLoading={isSubmitting} onClick={handleSubmit as never} disabled={isCatalogLoading || !catalog || !jobRoleId}>
+              {submitLabel}
             </Button>
           </div>
         </div>
@@ -439,3 +543,4 @@ const SkillBucket: React.FC<{
     </div>
   );
 };
+

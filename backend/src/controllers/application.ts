@@ -1,6 +1,9 @@
 import { Response, NextFunction } from "express";
 import { ApplicationService } from "../services/application";
 import { validateQueryParams, QueryValidationRules } from "../utils/validation";
+import { eventBus } from "../events/eventBus";
+import { EVENTS } from "../events/events";
+import { InterviewRepository } from "../repositories/InterviewRepository";
 
 const APPLICATION_STATUSES = [
   "PENDING",
@@ -110,6 +113,7 @@ export class ApplicationController {
         req.params.applicationId,
         req.body.status
       );
+      eventBus.emit(EVENTS.APPLICATION_UPDATED, {applicationId: application.id,});
 
       res.status(200).json({
         message: "Application status updated successfully.",
@@ -138,7 +142,9 @@ export class ApplicationController {
       validateQueryParams(req.body, validationRules);
 
       const scorecard = await ApplicationService.createScorecard(req.body);
+      const interview = await InterviewRepository.findById(req.body.interviewId);
 
+      eventBus.emit(EVENTS.SCORE_ADDED, {applicationId: interview?.applicationId,});
       res.status(201).json({
         message: "Scorecard submitted successfully",
         data: scorecard,

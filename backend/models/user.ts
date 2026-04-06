@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
 import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
@@ -12,10 +12,8 @@ export interface UserAttributes {
   firstName: string;
   lastName?: string | null;
   email: string;
-  passwordHash?: string | null;
   role: UserRole;
   status: EmployeeStatus;
-  lastLoginAt?: Date | null;
   isActive?: boolean;
 }
 
@@ -68,11 +66,6 @@ export default function UserModel(
         type: DataTypes.STRING,
         allowNull: false,
       },
-      passwordHash: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        field: "password_hash",
-      },
       role: {
         type: DataTypes.ENUM("user", "admin", "superadmin", "interviewer"),
         allowNull: false,
@@ -82,11 +75,6 @@ export default function UserModel(
         type: DataTypes.ENUM("active", "inactive", "invited"),
         allowNull: false,
         defaultValue: "active",
-      },
-      lastLoginAt: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        field: "last_login_at",
       },
       isActive: {
         type: DataTypes.BOOLEAN,
