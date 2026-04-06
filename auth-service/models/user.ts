@@ -1,6 +1,5 @@
 "use strict";
-import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
-import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
+import { DataTypes, Model, ModelStatic, Sequelize } from "sequelize";
 
 export type UserRole = "user" | "admin" | "superadmin" | "interviewer";
 export type EmployeeStatus = "active" | "inactive" | "invited";
@@ -8,13 +7,15 @@ export type EmployeeStatus = "active" | "inactive" | "invited";
 export interface UserAttributes {
   id: string;
   organizationId: string;
-  departmentId?: string | null;
   firstName: string;
   lastName?: string | null;
   email: string;
   role: UserRole;
   status: EmployeeStatus;
   isActive?: boolean;
+  microsoftOid: string;
+  tenantId: string;
+  lastLoginAt?: Date | null;
 }
 
 export interface UserInstance extends Model<UserAttributes>, UserAttributes {}
@@ -37,18 +38,8 @@ export default function UserModel(
         type: DataTypes.UUID,
         field: "organization_id",
         allowNull: false,
-        defaultValue: DEFAULT_ORGANIZATION_ID,
         references: {
-          model: "organizations",
-          key: "id",
-        },
-      },
-      departmentId: {
-        type: DataTypes.UUID,
-        field: "department_id",
-        allowNull: true,
-        references: {
-          model: "departments",
+          model: "auth_organizations",
           key: "id",
         },
       },
@@ -82,13 +73,31 @@ export default function UserModel(
         defaultValue: true,
         field: "is_active",
       },
+      microsoftOid: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        field: "microsoft_oid",
+      },
+      tenantId: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        field: "tenant_id",
+      },
+      lastLoginAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "last_login_at",
+      },
     },
     {
-      tableName: "employees",
+      tableName: "auth_users",
       modelName: "user",
       schema,
       timestamps: true,
-      indexes: [{ unique: true, fields: ["organization_id", "email"] }],
+      indexes: [
+        { unique: true, fields: ["organization_id", "email"] },
+        { unique: true, fields: ["tenant_id", "microsoft_oid"] },
+      ],
     }
   ) as ModelStatic<UserInstance> & {
     associate?: (models: any) => void;
@@ -96,12 +105,7 @@ export default function UserModel(
 
   User.associate = (models: any) => {
     User.belongsTo(models.organization, { foreignKey: "organizationId", as: "organization" });
-    User.belongsTo(models.department, { foreignKey: "departmentId", as: "department" });
-    User.hasMany(models.employeeRole, { foreignKey: "userId", as: "roleAssignments" });
-    User.hasMany(models.interviewSlot, { foreignKey: "interviewerId", as: "slots" });
-    User.hasMany(models.interview, { foreignKey: "interviewerId", as: "interviews" });
-    User.hasMany(models.interviewPanel, { foreignKey: "createdBy", as: "createdPanels" });
-    User.hasMany(models.interviewPanelMember, { foreignKey: "userId", as: "panelMemberships" });
+    User.hasMany(models.refreshToken, { foreignKey: "userId", as: "refreshTokens" });
   };
 
   return User;

@@ -1,7 +1,13 @@
-﻿import { Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { CatalogService, UserService } from "../services/user";
 import { validateQueryParams, QueryValidationRules, lengthsOfFields } from "../utils/validation";
 import Errors from "../errors";
+
+function normalizeRole(role: unknown) {
+  return role === "admin" || role === "superadmin" || role === "interviewer"
+    ? role
+    : "user";
+}
 
 export class UserController {
   public static async upsertUser(req: any, res: Response, next: NextFunction) {
@@ -20,7 +26,46 @@ export class UserController {
         data: {
           email: result.user.email,
           role: result.user.role,
-          lastLoginAt: result.user.lastLoginAt,
+          created: result.created,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async syncFromCentralAuth(req: any, res: Response, next: NextFunction) {
+    try {
+      const expectedSecret = process.env.AUTH_SYNC_SECRET || "";
+      const providedSecret = typeof req.headers["x-auth-sync-secret"] === "string"
+        ? req.headers["x-auth-sync-secret"]
+        : "";
+
+      if (!expectedSecret || providedSecret !== expectedSecret) {
+        throw new Errors.UnauthorizedError("Invalid auth sync secret.");
+      }
+
+      const validationRules: QueryValidationRules = {
+        email: { type: "string", required: true, max: lengthsOfFields.email },
+        firstName: { type: "string", required: false, max: lengthsOfFields.firstName },
+        lastName: { type: "string", required: false, max: lengthsOfFields.lastName },
+      };
+
+      validateQueryParams(req.body, validationRules);
+
+      const result = await UserService.syncUserFromCentralAuth({
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        role: normalizeRole(req.body.role),
+      });
+
+      res.status(200).json({
+        data: {
+          id: result.user.id,
+          email: result.user.email,
+          role: result.user.role,
+          roles: result.roles,
           created: result.created,
         },
       });

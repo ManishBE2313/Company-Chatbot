@@ -1,4 +1,5 @@
-﻿import express, { NextFunction, Request, Response } from "express";
+import cookieParser from "cookie-parser";
+import express, { NextFunction, Request, Response } from "express";
 import authRouter from "./routes/auth";
 import candidateRouter from "./routes/candidate";
 import hrApplicationRouter from "./routes/hr/application";
@@ -24,15 +25,12 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// Inject models into every request
 app.use((req: any, _res, next) => {
   req.models = models;
   next();
 });
-
-
-// Start event-driven traceability system
 
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok" });
@@ -42,7 +40,6 @@ app.use("/api/auth", authRouter);
 app.use("/api/candidates", candidateRouter);
 app.use("/api/hr/applications", hrApplicationRouter);
 app.use("/api/traceability", traceabilityRoutes);
-
 app.use("/api/hr/jobs", hrJobRouter);
 app.use("/api/hr/catalog", hrCatalogRouter);
 app.use("/api/hr/settings", hrSettingsRouter);
@@ -54,7 +51,6 @@ app.use("/api/notifications", notificationRouter);
 app.use("/api/slots", interviewSlotRouter);
 app.use("/api/interviews", interviewRouter);
 app.use("/api/hr/jobs/:jobId", batchIngestRouter);
-
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(new Errors.BadRequestError("Route not found: " + req.method + " " + req.originalUrl));

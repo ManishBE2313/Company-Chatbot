@@ -59,7 +59,7 @@ export class CandidateService {
 
       await transaction.commit();
 
-      const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+      const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8001";
       const webhookUrl = process.env.NODE_WEBHOOK_URL || "http://127.0.0.1:3000/api/webhooks/ai-result";
 
       void fetch(`${fastApiUrl}/api/ai/queue-cv-screening`, {
@@ -98,3 +98,4 @@ export class CandidateService {
     }
   }
 }
+

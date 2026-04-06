@@ -2,7 +2,7 @@ import axios from "axios";
 import Errors from "../errors";
 import { SettingsRepository } from "../repositories/settings";
 
-const FASTAPI_BASE_URL = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+const FASTAPI_BASE_URL = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8001";
 
 export class SettingsService {
   public static async listSkills() {
@@ -95,3 +95,4 @@ export class SettingsService {
     });
   }
 }
+

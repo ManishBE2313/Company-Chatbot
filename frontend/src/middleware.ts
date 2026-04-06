@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
   // All routes that don't need a login
   const isPublicPath = path === "/login";
 
-  // Cookie name must match what FastAPI sets in auth.py
+  // Cookie name must match what the central auth service sets
   const token = request.cookies.get("authcookie1")?.value || "";
 
   // No token on a protected route → send to login

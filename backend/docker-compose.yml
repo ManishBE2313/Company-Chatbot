@@ -1,5 +1,4 @@
 services:
-  # 1. The Vector Database
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant_db
@@ -10,19 +9,32 @@ services:
       - qdrant_data:/qdrant/storage
     restart: always
 
-  # 2. Your AI FastAPI Backend
+  redis:
+    image: redis:7-alpine
+    container_name: company_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
   backend:
-    build: .                 # Changed from ./backend to . (current folder)
+    build: .
     container_name: ai_backend
     ports:
-      - "8000:8000"
+      - "8001:8001"
     env_file:
-      - .env                 # Changed from ./backend/.env to .env
+      - .env
     environment:
       - QDRANT_URL=http://qdrant:6333
+      - REDIS_HOST=redis
+      - FASTAPI_PORT=8001
+      - FASTAPI_BASE_URL=http://backend:8001
     depends_on:
       - qdrant
+      - redis
     restart: always
 
 volumes:
   qdrant_data:
+  redis_data:

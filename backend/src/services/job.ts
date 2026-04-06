@@ -1,4 +1,4 @@
-﻿import Errors from "../errors";
+import Errors from "../errors";
 import { JobAttributes } from "../../models/job";
 import { JobRepository } from "../repositories/job";
 import { UserRepository } from "../repositories/user";
@@ -159,7 +159,7 @@ export class JobService {
 
       await transaction.commit();
 
-      const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+      const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8001";
 
       fetch(fastApiUrl + "/api/jobs/setup", {
         method: "POST",
@@ -329,7 +329,7 @@ export class JobService {
       const updatedJob = await this.getJobForHR(jobId);
 
       if (updatedJob.status === "Open" && updatedJob.reviewStatus === "approved") {
-        const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+        const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8001";
         axios.post(`${fastApiUrl}/api/jobs/setup`, {
           jobId: updatedJob.id,
           title: updatedJob.title,
@@ -368,7 +368,7 @@ export class JobService {
     organizationId: string;
     createdById: string;
   }) {
-    const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000";
+    const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8001";
     let aiEvaluation;
 
     // 1. Call Python AI for evaluation
@@ -437,7 +437,7 @@ export class JobService {
 
     // 4. Post-Creation Hook for AI Vector Setup
     if (aiEvaluation.isApproved) {
-      const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+      const fastApiUrl = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8001";
       axios.post(`${fastApiUrl}/api/jobs/setup`, {
         jobId: newJob.id,
         title: newJob.title,
@@ -448,3 +448,4 @@ export class JobService {
     return { job: newJob, aiEvaluation };
   }
 }
+

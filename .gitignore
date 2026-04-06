@@ -2,7 +2,6 @@
 node_modules/
 
 venv/
-
 # env files
 .env
 .env.*
@@ -27,3 +26,5 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# auth-service/

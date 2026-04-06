@@ -1,24 +1,81 @@
-﻿import { Op } from "sequelize";
-import { AccessRole, Department, EmployeeRole, InterviewPanel, InterviewPanelMember, JobRole, JobRoleSkill, Location, Skill, User } from "../config/database";
+import { Op } from "sequelize";
+import { AccessRole, Department, EmployeeRole, InterviewPanel, InterviewPanelMember, JobRole, JobRoleSkill, Location, Organization, Skill, User } from "../config/database";
 import { UserRole } from "../../models/user";
-import { DEFAULT_ORGANIZATION_ID } from "../constants/system";
+import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_NAME } from "../constants/system";
+import { seedRoleNames } from "../data/initialCatalog";
 
 interface UpsertUserPayload {
   email: string;
   firstName?: string | null;
   lastName?: string | null;
+  role?: UserRole | null;
+  preserveExistingRole?: boolean;
 }
 
+const SYSTEM_ROLE_DESCRIPTIONS: Record<string, string> = {
+  superadmin: "Full HR platform access.",
+  admin: "Administrative HR access.",
+  interviewer: "Can conduct interviews and submit scorecards.",
+  hm: "Hiring manager workflow access.",
+  hrbp: "HR business partner workflow access.",
+  finance: "Finance workflow access.",
+  executive: "Executive visibility access.",
+  rmg: "Resource management access.",
+  employee: "Default employee access.",
+};
+
 export class UserRepository {
+  public static async ensureDefaultSecurityContext() {
+    const [organization] = await Organization.findOrCreate({
+      where: { id: DEFAULT_ORGANIZATION_ID },
+      defaults: {
+        id: DEFAULT_ORGANIZATION_ID,
+        name: DEFAULT_ORGANIZATION_NAME,
+        status: "active",
+      },
+    });
+
+    if (organization.name !== DEFAULT_ORGANIZATION_NAME || organization.status !== "active") {
+      organization.name = organization.name || DEFAULT_ORGANIZATION_NAME;
+      organization.status = "active";
+      await organization.save();
+    }
+
+    await Promise.all(
+      seedRoleNames.map((roleName) =>
+        AccessRole.findOrCreate({
+          where: {
+            organizationId: DEFAULT_ORGANIZATION_ID,
+            name: roleName,
+          },
+          defaults: {
+            organizationId: DEFAULT_ORGANIZATION_ID,
+            name: roleName,
+            description: SYSTEM_ROLE_DESCRIPTIONS[roleName] || `${roleName} access`,
+            isSystem: true,
+          },
+        })
+      )
+    );
+  }
+
   public static async upsertUser(payload: UpsertUserPayload) {
-    const email = payload.email.trim();
+    await this.ensureDefaultSecurityContext();
+
+    const email = payload.email.trim().toLowerCase();
     const existingUser = await User.findOne({ where: { email } });
 
     if (existingUser) {
       existingUser.firstName = payload.firstName?.trim() || existingUser.firstName;
       existingUser.lastName = payload.lastName?.trim() || existingUser.lastName || null;
-      existingUser.lastLoginAt = new Date();
       existingUser.organizationId = existingUser.organizationId || DEFAULT_ORGANIZATION_ID;
+      existingUser.isActive = true;
+      existingUser.status = existingUser.status || "active";
+
+      if (payload.role && !payload.preserveExistingRole) {
+        existingUser.role = payload.role;
+      }
+
       await existingUser.save();
       return { user: existingUser, created: false };
     }
@@ -29,8 +86,7 @@ export class UserRepository {
       email,
       firstName: payload.firstName?.trim() || fallbackFirstName,
       lastName: payload.lastName?.trim() || null,
-      lastLoginAt: new Date(),
-      role: "user",
+      role: payload.role || "user",
       status: "active",
       isActive: true,
     });
@@ -38,17 +94,70 @@ export class UserRepository {
     return { user, created: true };
   }
 
+  public static async syncFromAuthClaims(payload: UpsertUserPayload) {
+    return this.upsertUser({
+      ...payload,
+      preserveExistingRole: payload.preserveExistingRole ?? true,
+    });
+  }
+
   public static async findRoleByEmail(email: string): Promise<UserRole> {
-    const user = await User.findOne({ where: { email: email.trim() } });
+    const user = await User.findOne({ where: { email: email.trim().toLowerCase() } });
     return (user?.role as UserRole | undefined) ?? "user";
   }
 
   public static async findByEmail(email: string) {
-    return User.findOne({ where: { email: email.trim() } });
+    return User.findOne({ where: { email: email.trim().toLowerCase() } });
   }
 
   public static async findById(id: string) {
     return User.findByPk(id);
+  }
+
+  public static async ensureRoleAssignments(userId: string, roleNames: string[]) {
+    await this.ensureDefaultSecurityContext();
+
+    const uniqueRoleNames = Array.from(new Set(roleNames.filter(Boolean)));
+    if (!uniqueRoleNames.length) {
+      return [];
+    }
+
+    const roles = await AccessRole.findAll({
+      where: {
+        organizationId: DEFAULT_ORGANIZATION_ID,
+        name: {
+          [Op.in]: uniqueRoleNames,
+        },
+      },
+    }) as any[];
+
+    const rolesByName = new Map(roles.map((role) => [role.name, role]));
+    const assignedRoleIds: string[] = [];
+
+    for (const roleName of uniqueRoleNames) {
+      const role = rolesByName.get(roleName);
+      if (!role) {
+        continue;
+      }
+
+      assignedRoleIds.push(role.id);
+      await EmployeeRole.findOrCreate({
+        where: {
+          organizationId: DEFAULT_ORGANIZATION_ID,
+          userId,
+          roleId: role.id,
+          departmentId: null,
+        },
+        defaults: {
+          organizationId: DEFAULT_ORGANIZATION_ID,
+          userId,
+          roleId: role.id,
+          departmentId: null,
+        },
+      });
+    }
+
+    return assignedRoleIds;
   }
 
   public static async listEmployeesWithRoles() {
@@ -66,6 +175,8 @@ export class UserRepository {
   }
 
   public static async listAssignableRoles() {
+    await this.ensureDefaultSecurityContext();
+
     return AccessRole.findAll({
       where: { organizationId: DEFAULT_ORGANIZATION_ID },
       order: [["name", "ASC"]],
@@ -86,6 +197,8 @@ export class UserRepository {
   }
 
   public static async findRolesByNames(roleNames: string[]) {
+    await this.ensureDefaultSecurityContext();
+
     return AccessRole.findAll({
       where: {
         organizationId: DEFAULT_ORGANIZATION_ID,

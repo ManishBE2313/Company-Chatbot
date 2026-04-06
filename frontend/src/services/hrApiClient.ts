@@ -1,4 +1,4 @@
-﻿import axios from "axios";
+import axios from "axios";
 import {
   Job,
   CreateJobPayload,
@@ -23,7 +23,7 @@ import {
 } from "@/types/hr";
 
 const fastApiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -388,3 +388,4 @@ export async function getSuggestion(payload: { input: string; kind?: "skill" | "
     throw new Error(getErrorMessage(error, "Failed to get suggestion."));
   }
 }
+
