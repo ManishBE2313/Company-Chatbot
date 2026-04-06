@@ -23,7 +23,7 @@ import {
 } from "@/types/hr";
 
 const fastApiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001",
+  baseURL: "",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

@@ -196,18 +196,21 @@ const submit = async () => {
       payload = cleanPayload(payload);
     }
 
-   if (mode === "HR") {
-  await axios.post(`${ROOT_API_URL}/api/employee/create`, payload);
-} else {
-  await axios.put(`${ROOT_API_URL}/api/employee/update`, payload);
-}
+    if (mode === "HR") {
+      await axios.post(`${ROOT_API_URL}/api/employee/create`, payload, { withCredentials: true });
+    } else {
+      if (!employee?.id) {
+        throw new Error("Employee id is required for update.");
+      }
+      await axios.put(`${ROOT_API_URL}/api/employee/update/${employee.id}`, payload, { withCredentials: true });
+    }
    
 
     alert("Employee Added");
     onClose();
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    alert("Error");
+    alert(err?.response?.data?.message || err?.message || "Error");
   } finally {
     setIsLoading(false);
   }

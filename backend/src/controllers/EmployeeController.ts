@@ -6,7 +6,13 @@ export class EmployeeController {
 // get my profile
  public static async getMyProfile(req: any, res: any) {
   try {
-    const email = req.user.sub;
+    const email = req.user?.email || req.user?.sub;
+
+    if (!email) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
 
     const employee = await EmployeeRepository.findByWorkEmail(email);
 
@@ -68,8 +74,7 @@ export class EmployeeController {
     res: Response,
     next: NextFunction
   ) {
-    
-   const email = (req as any).user?.sub;
+   const email = (req as any).user?.email || (req as any).user?.sub;
     if (!email) {
       return res.status(401).json({
         message: "Unauthorized",

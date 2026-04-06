@@ -1,13 +1,26 @@
-# api/dependencies.py
 import os
 import httpx
 import jwt
 from fastapi import Request, HTTPException
 
-# This must match the secret used in api/auth.py
 JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-enterprise-key")
 NODE_API_BASE_URL = os.getenv("ROOT_URL", "http://127.0.0.1:3000").rstrip("/")
-VALID_ROLES = {"user", "admin", "superadmin","interviewer"}
+JWT_ISSUER = os.getenv("JWT_ISSUER", "company-chatbot-auth-service")
+JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "company-chatbot-apps")
+AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "authcookie1")
+VALID_ROLES = {"user", "admin", "superadmin", "interviewer"}
+
+
+def get_request_token(request: Request):
+    cookie_token = request.cookies.get(AUTH_COOKIE_NAME)
+    if cookie_token:
+        return cookie_token
+
+    authorization = request.headers.get("authorization", "")
+    if authorization.lower().startswith("bearer "):
+        return authorization.split(" ", 1)[1].strip()
+
+    return None
 
 
 async def get_latest_role(email: str, fallback_role: str):
@@ -31,22 +44,23 @@ async def get_latest_role(email: str, fallback_role: str):
 
 
 async def get_current_user(request: Request):
-    """
-    FastAPI Dependency to check for a valid JWT in the HTTP-Only cookies.
-    If the cookie is missing or invalid, it blocks the request.
-    """
-    # Look for the exact cookie name we set during the SSO login callback
-    token = request.cookies.get("authcookie1")
+    token = get_request_token(request)
 
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated. Please log in.")
 
     try:
-        # Decode and verify the JWT
-        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        payload["role"] = await get_latest_role(payload.get("sub", ""), payload.get("role", "user"))
-        return payload # Returns a dictionary containing user details (e.g., email, role)
-
+        payload = jwt.decode(
+            token,
+            JWT_SECRET,
+            algorithms=["HS256"],
+            issuer=JWT_ISSUER,
+            audience=JWT_AUDIENCE,
+        )
+        email = payload.get("email") or payload.get("sub") or ""
+        payload["email"] = email
+        payload["role"] = await get_latest_role(email, payload.get("role", "user"))
+        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
     except jwt.InvalidTokenError:

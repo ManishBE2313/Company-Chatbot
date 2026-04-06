@@ -1,4 +1,4 @@
-﻿import { Sequelize } from "sequelize";
+import { Sequelize } from "sequelize";
 import OrganizationModel from "../../models/organization";
 import DepartmentModel from "../../models/department";
 import LocationModel from "../../models/location";
@@ -20,7 +20,6 @@ import InterviewModel from "../../models/interview";
 import ScorecardModel from "../../models/scorecard";
 import PipelineEventModel from "../../models/pipelineEvent";
 import { runtimeConfig } from "./runtime";
-import EmployeeModel from "../../models/employee";
 import EmployeeContactModel from "../../models/employeeContact";
 import EmployeePersonalModel from "../../models/employeePersonal";
 import EmployeeWorkModel from "../../models/employeeWork";
@@ -28,7 +27,6 @@ import EmployeeEmergencyModel from "../../models/employeeEmergency";
 import EmployeeEducationModel from "../../models/employeeEducation";
 import TimesheetModel from "../../models/timesheet";
 import TimesheetEntryModel from "../../models/timesheetEntry";
-
 import CandidateTraceModel from "../../models/candidateTrace";
 import JobTraceabilityModel from "../../models/jobTraceability";
 
@@ -70,11 +68,11 @@ export const Job = JobModel(sequelize);
 export const JobCriteria = JobCriteriaModel(sequelize);
 export const JobApplication = JobApplicationModel(sequelize);
 export const User = UserModel(sequelize);
+export const Employee = User;
 export const InterviewSlot = InterviewSlotModel(sequelize);
 export const Interview = InterviewModel(sequelize);
 export const Scorecard = ScorecardModel(sequelize);
 export const PipelineEvent = PipelineEventModel(sequelize);
-export const Employee = EmployeeModel(sequelize);
 export const EmployeeContact = EmployeeContactModel(sequelize);
 export const EmployeePersonal = EmployeePersonalModel(sequelize);
 export const EmployeeWork = EmployeeWorkModel(sequelize);
@@ -102,11 +100,11 @@ const models = {
   jobCriteria: JobCriteria,
   jobApplication: JobApplication,
   user: User,
+  employee: Employee,
   interviewSlot: InterviewSlot,
   interview: Interview,
   scorecard: Scorecard,
   pipelineEvent: PipelineEvent,
-  employee: Employee,
   employeeContact: EmployeeContact,
   employeePersonal: EmployeePersonal,
   employeeWork: EmployeeWork,
@@ -117,7 +115,7 @@ const models = {
   // candidateTrace: CandidateTrace,
   // jobTraceability: JobTraceability,
 };
-for (const model of Object.values(models) as Array<any>) {
+for (const model of new Set(Object.values(models) as Array<any>)) {
   if (typeof model.associate === "function") {
     model.associate(models);
   }
@@ -130,4 +128,5 @@ export type MainDbModelName = keyof typeof models;
 export function getMainDbModel<T extends MainDbModelName>(modelName: T) {
   return models[modelName];
 }
-export {models};
+
+export { models };

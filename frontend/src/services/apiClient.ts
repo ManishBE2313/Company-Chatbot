@@ -85,7 +85,7 @@ export async function streamChatMessage(
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
-  const response = await fetch(`${CHAT_API_BASE_URL}/api/user/me`, {
+  const response = await fetch(`/api/user/me`, {
     method: "GET",
     credentials: "include",
     cache: "no-store",

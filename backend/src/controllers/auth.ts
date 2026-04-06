@@ -21,6 +21,21 @@ function normalizeRole(role: unknown) {
 }
 
 export class AuthController {
+  public static async getCurrentUser(req: any, res: Response, next: NextFunction) {
+    try {
+      const auth = req.auth || {};
+      const user = req.user || {};
+
+      res.status(200).json({
+        email: user.email || auth.email || auth.sub || null,
+        role: user.role || auth.role || "user",
+        is_sso: Boolean(auth.appCode || auth.tenantId || auth.email),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public static async initiateSsoLogin(req: Request, res: Response, next: NextFunction) {
     try {
       const returnTo = asSingleString(req.query.returnTo) || undefined;

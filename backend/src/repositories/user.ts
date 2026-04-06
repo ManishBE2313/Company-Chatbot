@@ -63,12 +63,18 @@ export class UserRepository {
     await this.ensureDefaultSecurityContext();
 
     const email = payload.email.trim().toLowerCase();
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [{ email }, { workEmail: email }],
+      },
+    });
 
     if (existingUser) {
       existingUser.firstName = payload.firstName?.trim() || existingUser.firstName;
       existingUser.lastName = payload.lastName?.trim() || existingUser.lastName || null;
       existingUser.organizationId = existingUser.organizationId || DEFAULT_ORGANIZATION_ID;
+      existingUser.email = email;
+      existingUser.workEmail = existingUser.workEmail || email;
       existingUser.isActive = true;
       existingUser.status = existingUser.status || "active";
 
@@ -84,6 +90,7 @@ export class UserRepository {
     const user = await User.create({
       organizationId: DEFAULT_ORGANIZATION_ID,
       email,
+      workEmail: email,
       firstName: payload.firstName?.trim() || fallbackFirstName,
       lastName: payload.lastName?.trim() || null,
       role: payload.role || "user",
@@ -102,12 +109,22 @@ export class UserRepository {
   }
 
   public static async findRoleByEmail(email: string): Promise<UserRole> {
-    const user = await User.findOne({ where: { email: email.trim().toLowerCase() } });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [{ email: normalizedEmail }, { workEmail: normalizedEmail }],
+      },
+    });
     return (user?.role as UserRole | undefined) ?? "user";
   }
 
   public static async findByEmail(email: string) {
-    return User.findOne({ where: { email: email.trim().toLowerCase() } });
+    const normalizedEmail = email.trim().toLowerCase();
+    return User.findOne({
+      where: {
+        [Op.or]: [{ email: normalizedEmail }, { workEmail: normalizedEmail }],
+      },
+    });
   }
 
   public static async findById(id: string) {

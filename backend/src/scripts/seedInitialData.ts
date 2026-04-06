@@ -1,5 +1,5 @@
 import { QueryTypes } from "sequelize";
-import { sequelize, Organization, Department, Location, AccessRole, Skill, JobRole, JobRoleSkill, Employee, EmployeeRole } from "../config/database";
+import { sequelize, Organization, Department, Location, AccessRole, Skill, JobRole, JobRoleSkill, Employee, EmployeeRole, User } from "../config/database";
 import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_NAME, PRIMARY_ROLE_RANK } from "../constants/system";
 import { seedDepartments, seedJobRoles, seedLocations, seedRoleNames, seedSkills } from "../data/initialCatalog";
 
@@ -161,7 +161,7 @@ async function migrateLegacyUsersIfNeeded() {
   ) as any[];
 
   for (const legacyUser of legacyUsers) {
-    const [employee] = await Employee.findOrCreate({
+    const [employee] = await User.findOrCreate({
       where: { id: legacyUser.id },
       defaults: {
         id: legacyUser.id,
@@ -184,7 +184,7 @@ async function migrateLegacyUsersIfNeeded() {
 async function ensureEmployeeRoleAssignments() {
   const roles = await AccessRole.findAll({ where: { organizationId: DEFAULT_ORGANIZATION_ID } }) as any[];
   const rolesByName = new Map(roles.map((role) => [role.get("name"), role.get("id")]));
-  const employees = await Employee.findAll({ where: { organizationId: DEFAULT_ORGANIZATION_ID } }) as any[];
+  const employees = await User.findAll({ where: { organizationId: DEFAULT_ORGANIZATION_ID } }) as any[];
 
   for (const employee of employees) {
     const roleNames = new Set<string>();

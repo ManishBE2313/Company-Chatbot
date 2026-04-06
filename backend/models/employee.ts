@@ -1,10 +1,17 @@
 "use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
 export interface EmployeeAttributes {
   id: string;
+  organizationId?: string;
+  departmentId?: string | null;
   firstName: string;
-  lastName: string;
+  lastName?: string | null;
+  email?: string;
+  role?: "user" | "admin" | "superadmin" | "interviewer";
+  status?: "active" | "inactive" | "invited";
+  isActive?: boolean;
   designation?: string;
   band?: string;
   location?: string;
@@ -33,6 +40,25 @@ export default function EmployeeModel(
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      organizationId: {
+        type: DataTypes.UUID,
+        field: "organization_id",
+        allowNull: false,
+        defaultValue: DEFAULT_ORGANIZATION_ID,
+        references: {
+          model: "organizations",
+          key: "id",
+        },
+      },
+      departmentId: {
+        type: DataTypes.UUID,
+        field: "department_id",
+        allowNull: true,
+        references: {
+          model: "departments",
+          key: "id",
+        },
+      },
       firstName: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -40,8 +66,29 @@ export default function EmployeeModel(
       },
       lastName: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         field: "last_name",
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        field: "work_email",
+      },
+      role: {
+        type: DataTypes.ENUM("user", "admin", "superadmin", "interviewer"),
+        allowNull: false,
+        defaultValue: "user",
+      },
+      status: {
+        type: DataTypes.ENUM("active", "inactive", "invited"),
+        allowNull: false,
+        defaultValue: "active",
+      },
+      isActive: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+        field: "is_active",
       },
       designation: {
         type: DataTypes.STRING,
@@ -67,6 +114,7 @@ export default function EmployeeModel(
     {
       tableName: "employees",
       timestamps: true,
+      indexes: [{ unique: true, fields: ["organization_id", "work_email"] }],
     }
   ) as EmployeeModelType;
 

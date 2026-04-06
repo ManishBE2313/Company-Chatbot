@@ -1,30 +1,27 @@
 import axios, { AxiosError, Method } from "axios";
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
+const FASTAPI_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://127.0.0.1:8000";
+  "http://127.0.0.1:8001";
 
-export async function proxyToBackend(
+export async function proxyToFastApi(
   request: NextRequest,
   targetPath: string,
   method: Method
 ) {
   try {
     const contentType = request.headers.get("content-type");
-    const userEmail = request.headers.get("x-user-email");
     const authorization = request.headers.get("authorization");
     const cookie = request.headers.get("cookie");
     const body = method === "GET" ? undefined : await request.text();
 
     const response = await axios.request({
-      url: BACKEND_BASE_URL + targetPath,
+      url: FASTAPI_BASE_URL + targetPath,
       method,
       data: body,
       headers: {
         ...(contentType ? { "Content-Type": contentType } : {}),
-        ...(userEmail ? { "x-user-email": userEmail } : {}),
         ...(authorization ? { Authorization: authorization } : {}),
         ...(cookie ? { Cookie: cookie } : {}),
       },
@@ -33,13 +30,14 @@ export async function proxyToBackend(
 
     return NextResponse.json(response.data, { status: response.status });
   } catch (error) {
-    const axiosError = error as AxiosError<{ message?: string }>;
+    const axiosError = error as AxiosError<{ message?: string; detail?: string }>;
     return NextResponse.json(
       {
         message:
+          axiosError.response?.data?.detail ||
           axiosError.response?.data?.message ||
           axiosError.message ||
-          "Failed to reach backend service.",
+          "Failed to reach FastAPI service.",
       },
       { status: axiosError.response?.status || 502 }
     );
