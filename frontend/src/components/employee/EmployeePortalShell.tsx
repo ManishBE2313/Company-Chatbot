@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, ChevronRight, Clock3, FilePenLine, LogOut, UserRound } from 'lucide-react';
+import { Building2, ChevronRight, Clock3, FilePenLine, LogOut, MessageSquareQuote, UserRound } from 'lucide-react';
 import { logoutUser } from '@/services/apiClient';
 import { cn } from '@/utils/classNames';
 
@@ -122,3 +122,5 @@ export function EmployeePortalShell({
     </div>
   );
 }
+
+

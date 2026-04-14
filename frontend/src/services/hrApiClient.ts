@@ -18,6 +18,12 @@ import {
   RoleOption,
   TimesheetReviewResponse,
 } from "@/types/hr";
+import {
+  SurveyAdminFilters,
+  SurveyPublishPayload,
+  SurveySummary,
+  normalizeSurveyStatus,
+} from "@/types/survey";
 
 const fastApiClient = axios.create({
   baseURL: "",
@@ -90,6 +96,57 @@ export async function getJobs(): Promise<Job[]> {
   }
 }
 
+
+export async function getAdminSurveys(
+  filters?: Partial<SurveyAdminFilters>
+): Promise<SurveySummary[]> {
+  try {
+    const response = await nextApiClient.get<{
+      data: Array<
+        Omit<SurveySummary, "status"> & {
+          status?: string;
+        }
+      >;
+    }>("/api/hr/surveys");
+
+    const surveys = response.data.data.map((survey) => ({
+      ...survey,
+      status: normalizeSurveyStatus(survey.status),
+    }));
+
+    return surveys.filter((survey) => {
+      const statusMatch =
+        !filters?.status || filters.status === "ALL"
+          ? true
+          : survey.status === filters.status;
+      const typeMatch =
+        !filters?.type || filters.type === "ALL"
+          ? true
+          : survey.surveyType === filters.type;
+
+      return statusMatch && typeMatch;
+    });
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch surveys."));
+  }
+}
+
+export async function publishAdminSurvey(
+  payload: SurveyPublishPayload
+): Promise<SurveySummary> {
+  try {
+    const response = await nextApiClient.post<{
+      data: Omit<SurveySummary, "status"> & { status?: string };
+    }>("/api/hr/surveys", payload);
+
+    return {
+      ...response.data.data,
+      status: normalizeSurveyStatus(response.data.data.status),
+    };
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to publish survey."));
+  }
+}
 export async function getJobById(jobId: string): Promise<Job> {
   try {
     const response = await nextApiClient.get<{ data: Job }>(`/api/hr/jobs/${jobId}`);
@@ -353,3 +410,5 @@ export async function reviewTimesheet(timesheetId: string, status: "approved" | 
     throw new Error(getErrorMessage(error, "Failed to update timesheet status."));
   }
 }
+
+

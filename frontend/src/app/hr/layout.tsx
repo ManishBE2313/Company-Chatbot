@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import {
   Users,
   Settings, 
   ClipboardCheck,
+  MessageSquareQuote,
 } from "lucide-react";
 import { AsanaSpinner } from "@/components/ui/AsanaSpinner";
 
@@ -31,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "My Interviews", href: "/hr/my-interviews", icon: <CalendarRange size={16} /> },
   { label: "Jobs", href: "/hr/jobs", icon: <Briefcase size={16} /> },
   { label: "Applications", href: "/hr/applications", icon: <Users size={16} /> },
+  { label: "Survey", href: "/hr/surveys", icon: <MessageSquareQuote size={16} /> },
   {
     label: "Timesheets",
     href: "/hr/timesheets",
@@ -148,3 +150,5 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+

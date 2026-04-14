@@ -1,16 +1,11 @@
-import { sequelize } from "../../config/database";
-import SurveyModel from "../../../models/survey/survey";
 import { Transaction, Op } from "sequelize";
-import QuestionModel from "../../../models/survey/question";
-import OptionModel from "../../../models/survey/question_options";
-import DepartmentModel from "../../../models/survey/department"; // ✅ NEW
-import SurveyDepartmentModel from "../../../models/survey/survey_department"; // ✅ NEW
-
-const surveyModel = SurveyModel(sequelize);
-const questionModel = QuestionModel(sequelize);
-const optionModel = OptionModel(sequelize);
-const departmentModel = DepartmentModel(sequelize);
-const surveyDepartmentModel = SurveyDepartmentModel(sequelize);
+import {
+  sequelize,
+  Survey,
+  SurveyQuestion,
+  SurveyOption,
+  Department,
+} from "../../config/database";
 
 interface CreateSurveyDTO {
   title: string;
@@ -21,39 +16,36 @@ interface CreateSurveyDTO {
 }
 
 export class SurveyRepository {
-  // CREATE
   static async createSurvey(
     data: CreateSurveyDTO,
     transaction: Transaction
   ) {
-    return surveyModel.create(data, { transaction });
+    return Survey.create(data, { transaction });
   }
 
-  // FIND BY ID
   static async findById(id: string) {
-    return surveyModel.findOne({
+    return Survey.findOne({
       where: { id },
       include: [
         {
-          model: questionModel,
+          model: SurveyQuestion,
           as: "questions",
           include: [
             {
-              model: optionModel,
+              model: SurveyOption,
               as: "options",
             },
           ],
         },
         {
-          model: departmentModel,
+          model: Department,
           as: "departments",
-          through: { attributes: [] }, // hide join table
+          through: { attributes: [] },
         },
       ],
     });
   }
 
-  // GET ALL (status + pagination + sorting)
   static async getAllSurveys(params: {
     status?: string;
     page: number;
@@ -67,7 +59,7 @@ export class SurveyRepository {
     const offset = (page - 1) * limit;
     const now = new Date();
 
-    let where: any = {};
+    const where: any = {};
 
     if (status === "UPCOMING") {
       where.startAt = { [Op.gt]: now };
@@ -82,39 +74,39 @@ export class SurveyRepository {
       where.endAt = { [Op.lt]: now };
     }
 
-    let include: any[] = [
+    const include: any[] = [
       {
-        model: questionModel,
+        model: SurveyQuestion,
         as: "questions",
         attributes: ["id"],
       },
     ];
 
-   if (departmentIds && departmentIds.length > 0) {
-  include.push({
-    model: departmentModel,
-    as: "departments",
-    required: false,
-    attributes: ["id", "name"],
-    where: {
-      id: {
-        [Op.in]: departmentIds,
-      },
-    },
-    through: { attributes: [] },
-  });
+    if (departmentIds && departmentIds.length > 0) {
+      include.push({
+        model: Department,
+        as: "departments",
+        required: false,
+        attributes: ["id", "name"],
+        where: {
+          id: {
+            [Op.in]: departmentIds,
+          },
+        },
+        through: { attributes: [] },
+      });
 
-  where[Op.or] = [
-    { isForAllDepartments: true },
-    {
-      "$departments.id$": {
-        [Op.in]: departmentIds,
-      },
-    },
-  ];
-}
+      where[Op.or] = [
+        { isForAllDepartments: true },
+        {
+          "$departments.id$": {
+            [Op.in]: departmentIds,
+          },
+        },
+      ];
+    }
 
-    return surveyModel.findAndCountAll({
+    return Survey.findAndCountAll({
       where,
       limit,
       offset,
@@ -124,13 +116,12 @@ export class SurveyRepository {
     });
   }
 
-  // UPDATE
   static async updateSurvey(
     id: string,
     data: any,
     transaction: Transaction
   ) {
-    await surveyModel.update(data, {
+    await Survey.update(data, {
       where: { id },
       transaction,
     });

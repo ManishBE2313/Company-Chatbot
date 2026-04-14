@@ -1,21 +1,21 @@
 "use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
 
-export interface DepartmentAttributes {
+export interface SurveyDepartmentRefAttributes {
   id: string;
   name: string;
 }
 
-export interface DepartmentInstance
-  extends Model<DepartmentAttributes>,
-    DepartmentAttributes {}
+export interface SurveyDepartmentRefInstance
+  extends Model<SurveyDepartmentRefAttributes>,
+    SurveyDepartmentRefAttributes {}
 
-export default function DepartmentModel(
+export default function SurveyDepartmentRefModel(
   sequelize: Sequelize,
   schema?: string
-): ModelStatic<DepartmentInstance> & { associate?: (models: any) => void } {
-  const Department = sequelize.define<DepartmentInstance>(
-    "department",
+): ModelStatic<SurveyDepartmentRefInstance> & { associate?: (models: any) => void } {
+  const SurveyDepartmentRef = sequelize.define<SurveyDepartmentRefInstance>(
+    "surveyDepartment",
     {
       id: {
         type: DataTypes.UUID,
@@ -29,14 +29,16 @@ export default function DepartmentModel(
     },
     {
       tableName: "departments",
-      modelName: "department",
+      modelName: "surveyDepartment",
       schema,
       timestamps: true,
     }
-  ) as ModelStatic<DepartmentInstance> & { associate?: (models: any) => void };
+  ) as ModelStatic<SurveyDepartmentRefInstance> & {
+    associate?: (models: any) => void;
+  };
 
-  Department.associate = (models: any) => {
-    Department.belongsToMany(models.survey, {
+  SurveyDepartmentRef.associate = (models: any) => {
+    SurveyDepartmentRef.belongsToMany(models.survey, {
       through: models.survey_department,
       foreignKey: "departmentId",
       otherKey: "surveyId",
@@ -44,5 +46,5 @@ export default function DepartmentModel(
     });
   };
 
-  return Department;
+  return SurveyDepartmentRef;
 }

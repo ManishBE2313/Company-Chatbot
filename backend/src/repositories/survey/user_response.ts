@@ -1,18 +1,5 @@
-import { sequelize } from "../../config/database";
 import { Transaction } from "sequelize";
-
-import SurveyModel from "../../../models/survey/survey";
-import QuestionModel from "../../../models/survey/question";
-import OptionModel from "../../../models/survey/question_options";
-import ResponseModel from "../../../models/survey/response";
-import AnswerModel from "../../../models/survey/answer";
-
-// ✅ Initialize models
-const Survey = SurveyModel(sequelize);
-const Question = QuestionModel(sequelize);
-const Option = OptionModel(sequelize);
-const Response = ResponseModel(sequelize);
-const Answer = AnswerModel(sequelize);
+import { sequelize, Survey, SurveyQuestion, SurveyOption, SurveyResponse, SurveyAnswer } from "../../config/database";
 
 type CreateResponseDTO = {
   surveyId: string;
@@ -29,23 +16,20 @@ type CreateAnswerDTO = {
 };
 
 export class UserResponseRepository {
-
-  // ✅ Get all surveys
   static async getAllSurveys() {
     return Survey.findAll();
   }
 
-  // ✅ Get survey with questions + options
   static async getSurveyById(surveyId: string) {
     return Survey.findOne({
       where: { id: surveyId },
       include: [
         {
-          model: Question,
+          model: SurveyQuestion,
           as: "questions",
           include: [
             {
-              model: Option,
+              model: SurveyOption,
               as: "options"
             }
           ]
@@ -54,9 +38,8 @@ export class UserResponseRepository {
     });
   }
 
-  // ✅ Find attributed response
   static async findResponse(employeeId: string, surveyId: string) {
-    return Response.findOne({
+    return SurveyResponse.findOne({
       where: {
         employeeId,
         surveyId
@@ -64,12 +47,11 @@ export class UserResponseRepository {
     });
   }
 
-  // Find anonymous response
   static async findAnonymousResponse(
     anonymousToken: string,
     surveyId: string
   ) {
-    return Response.findOne({
+    return SurveyResponse.findOne({
       where: {
         anonymousToken,
         surveyId
@@ -77,7 +59,6 @@ export class UserResponseRepository {
     });
   }
 
-  // ✅ Get all user responses (for dashboard)
   static async getUserResponses(
     employeeId: string | null,
     anonymousToken: string | null
@@ -90,25 +71,23 @@ export class UserResponseRepository {
       where.anonymousToken = anonymousToken;
     }
 
-    return Response.findAll({
+    return SurveyResponse.findAll({
       where,
       attributes: ["surveyId"]
     });
   }
 
-  // ✅ Create response
   static async createResponse(
     data: CreateResponseDTO,
     transaction: Transaction
   ) {
-    return Response.create(data, { transaction });
+    return SurveyResponse.create(data, { transaction });
   }
 
-  // ✅ Bulk insert answers
   static async bulkCreateAnswers(
     data: CreateAnswerDTO[],
     transaction: Transaction
   ) {
-    return Answer.bulkCreate(data, { transaction });
+    return SurveyAnswer.bulkCreate(data, { transaction });
   }
 }

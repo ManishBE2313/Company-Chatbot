@@ -1,5 +1,10 @@
 // src/services/apiClient.ts
 import { ChatApiRequest } from "@/types/chat";
+import {
+  SurveyAnswerInput,
+  SurveySummary,
+  normalizeSurveyStatus,
+} from "@/types/survey";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL2 || "http://localhost:3000";
@@ -159,3 +164,68 @@ export async function submitTimesheet(empId: string, payload: TimesheetPayload) 
 
   return response.json();
 }
+
+export async function getEmployeeSurveys(): Promise<SurveySummary[]> {
+  const response = await fetch("/api/employee/surveys", {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Server error: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const surveys = Array.isArray(payload?.data) ? payload.data : [];
+
+  return surveys.map((survey: SurveySummary & { status?: string }) => ({
+    ...survey,
+    status: normalizeSurveyStatus(survey.status),
+  }));
+}
+
+export async function getEmployeeSurveyById(
+  surveyId: string
+): Promise<SurveySummary> {
+  const response = await fetch(`/api/employee/surveys/${surveyId}`, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Server error: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const survey = payload?.data as SurveySummary & { status?: string };
+
+  return {
+    ...survey,
+    status: normalizeSurveyStatus(survey?.status),
+  };
+}
+
+export async function submitEmployeeSurveyResponse(
+  surveyId: string,
+  answers: SurveyAnswerInput[]
+): Promise<void> {
+  const response = await fetch(`/api/employee/surveys/${surveyId}/response`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ answers }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Server error: ${response.status}`);
+  }
+}
+
+

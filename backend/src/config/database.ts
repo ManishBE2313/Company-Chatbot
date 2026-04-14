@@ -29,6 +29,12 @@ import TimesheetModel from "../../models/timesheet";
 import TimesheetEntryModel from "../../models/timesheetEntry";
 import CandidateTraceModel from "../../models/candidateTrace";
 import JobTraceabilityModel from "../../models/jobTraceability";
+import SurveyModel from "../../models/survey/survey";
+import SurveyQuestionModel from "../../models/survey/question";
+import SurveyOptionModel from "../../models/survey/question_options";
+import SurveyResponseModel from "../../models/survey/response";
+import SurveyAnswerModel from "../../models/survey/answer";
+import SurveyDepartmentJoinModel from "../../models/survey/survey_department";
 
 const isProduction = runtimeConfig.nodeEnv.toLowerCase() === "production";
 
@@ -82,6 +88,12 @@ export const Timesheet = TimesheetModel(sequelize);
 export const TimesheetEntry = TimesheetEntryModel(sequelize);
 export const CandidateTrace = CandidateTraceModel(sequelize);
 export const JobTraceability = JobTraceabilityModel(sequelize);
+export const Survey = SurveyModel(sequelize);
+export const SurveyQuestion = SurveyQuestionModel(sequelize);
+export const SurveyOption = SurveyOptionModel(sequelize);
+export const SurveyResponse = SurveyResponseModel(sequelize);
+export const SurveyAnswer = SurveyAnswerModel(sequelize);
+export const SurveyDepartmentJoin = SurveyDepartmentJoinModel(sequelize);
 
 const models = {
   organization: Organization,
@@ -112,6 +124,12 @@ const models = {
   employeeEducation: EmployeeEducation,
   timesheet: Timesheet,
   timesheetEntry: TimesheetEntry,
+  survey: Survey,
+  question: SurveyQuestion,
+  option: SurveyOption,
+  response: SurveyResponse,
+  answer: SurveyAnswer,
+  survey_department: SurveyDepartmentJoin,
   // candidateTrace: CandidateTrace,
   // jobTraceability: JobTraceability,
 };
