@@ -4,23 +4,11 @@ import { anonymousTokenMiddleware } from "../../middlewares/survey/anonymousToke
 
 const router = express.Router();
 
-// ✅ Apply middleware to all user routes
-router.get(
-  "/user/surveys",
-  anonymousTokenMiddleware,
-  UserResponseController.getUserSurveys
-);
 
-router.get(
-  "/user/surveys/:surveyId",
-  anonymousTokenMiddleware,
-  UserResponseController.getSurvey
-);
+router.get("/user/surveys",anonymousTokenMiddleware,UserResponseController.getUserSurveys);
 
-router.post(
-  "/user/surveys/:surveyId/response",
-  anonymousTokenMiddleware,
-  UserResponseController.submitResponse
-);
+router.get("/user/surveys/:surveyId",anonymousTokenMiddleware,UserResponseController.getSurvey);
+
+router.post("/user/surveys/:surveyId/response",anonymousTokenMiddleware,UserResponseController.submitResponse);
 
 export default router;

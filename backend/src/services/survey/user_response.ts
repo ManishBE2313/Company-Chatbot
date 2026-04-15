@@ -2,6 +2,7 @@ import { Transaction } from "sequelize";
 import { sequelize } from "../../config/database";
 
 import { UserResponseRepository } from "../../repositories/survey/user_response";
+import { EmployeeRepository } from "../../repositories/survey/employee";
 
 type UUID = string;
 
@@ -22,13 +23,29 @@ type CreateAnswerDTO = {
 
 export class UserResponseService {
 
-  // ✅ GET ALL SURVEYS WITH STATUS
   static async getUserSurveys(
     employeeId: UUID | null,
     anonymousToken: string | null
   ) {
 
     const surveys = await UserResponseRepository.getAllSurveys();
+
+    let filteredSurveys = surveys;
+
+    //  Department filtering
+    if (employeeId) {
+      const employee = await EmployeeRepository.findById(employeeId);
+
+      filteredSurveys = surveys.filter((s: any) => {
+        if (s.isForAllDepartments) return true;
+
+        const surveyDepartments = s.departments.map((d: any) =>
+          d.name.toLowerCase()
+        );
+
+        return surveyDepartments.includes(employee.departmentId);
+      });
+    }
 
     const responses = await UserResponseRepository.getUserResponses(
       employeeId,
@@ -41,7 +58,7 @@ export class UserResponseService {
 
     const now = new Date();
 
-    return surveys.map((s: any) => {
+    return filteredSurveys.map((s: any) => {
 
       const isSubmitted = submittedSurveyIds.has(s.id);
 
@@ -60,7 +77,6 @@ export class UserResponseService {
     });
   }
 
-  // ✅ GET SINGLE SURVEY
   static async getSurvey(
     employeeId: UUID | null,
     surveyId: UUID,
@@ -71,6 +87,21 @@ export class UserResponseService {
 
     if (!survey) {
       throw new Error("Survey not found");
+    }
+
+    // Department check
+    if (employeeId && survey.surveyType !== "ANONYMOUS") {
+      const employee = await EmployeeRepository.findById(employeeId);
+
+      if (!survey.isForAllDepartments) {
+        const surveyDepartments = survey.departments.map((d: any) =>
+          d.name.toLowerCase()
+        );
+
+        if (!surveyDepartments.includes(employee.departmentId)) {
+          throw new Error("You are not allowed to view this survey");
+        }
+      }
     }
 
     let alreadySubmitted = false;
@@ -95,7 +126,6 @@ export class UserResponseService {
     };
   }
 
-  // ✅ SUBMIT RESPONSE
   static async submitResponse(
     employeeId: UUID | null,
     surveyId: UUID,
@@ -111,7 +141,43 @@ export class UserResponseService {
 
     const surveyType = survey.get("surveyType") as "ATTRIBUTED" | "ANONYMOUS";
 
-    // 🔥 ATTRIBUTED
+    //  Department check (only for attributed)
+    if (employeeId && surveyType !== "ANONYMOUS") {
+
+      const employee = await EmployeeRepository.findById(employeeId);
+
+      if (!survey.isForAllDepartments) {
+        const surveyDepartments = survey.departments.map((d: any) =>
+          d.name.toLowerCase()
+        );
+
+        const employeeDepartment = employee.departmentId;
+
+        if (!employeeDepartment || !surveyDepartments.includes(employeeDepartment)) {
+          throw new Error("You are not allowed to take this survey");
+        }
+      }
+    }
+
+    //Validate questions
+    const surveyQuestionIds = survey.questions.map((q: any) => q.id);
+    const answerQuestionIds = answers.map((a) => a.questionId);
+
+    // No extra questions
+    const invalidIds = answerQuestionIds.filter(
+      (id) => !surveyQuestionIds.includes(id)
+    );
+
+    if (invalidIds.length > 0) {
+      throw new Error("Invalid questionId in answers");
+    }
+
+    // All questions must be answered
+    if (surveyQuestionIds.length !== answerQuestionIds.length) {
+      throw new Error("All questions must be answered");
+    }
+
+    // ATTRIBUTED
     if (surveyType === "ATTRIBUTED") {
 
       if (!employeeId) {
@@ -128,13 +194,16 @@ export class UserResponseService {
       }
     }
 
-    // 🔥 ANONYMOUS
+    //  ANONYMOUS
     if (surveyType === "ANONYMOUS") {
 
       if (!anonymousToken) {
         throw new Error("Anonymous token missing");
       }
-
+      
+  if (survey.endAt && new Date(survey.endAt) < new Date()) {
+  throw new Error("Survey has expired");
+     }
       const existing = await UserResponseRepository.findAnonymousResponse(
         anonymousToken,
         surveyId
@@ -160,7 +229,7 @@ export class UserResponseService {
         responseId: response.id,
         questionId: a.questionId,
         optionId: a.optionId,
-        answer: a.text,   // ✅ FIXED (matches your Answer model)
+        text: a.text, 
         rating: a.rating
       }));
 

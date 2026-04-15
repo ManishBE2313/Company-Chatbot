@@ -8,7 +8,7 @@ import { startTraceabilityConsumer } from "./events/traceabilityConsumer";
 
 export async function initServer() {
   await sequelize.authenticate();
-  await sequelize.sync({ force: false, alter: true });
+  await sequelize.sync({ force: true, alter: true });
   await seedInitialData();
 
   console.log(`[1/5] Backend port connected to ${runtimeConfig.backendPort}`);

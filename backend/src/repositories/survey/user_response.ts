@@ -1,5 +1,5 @@
 import { Transaction } from "sequelize";
-import { sequelize, Survey, SurveyQuestion, SurveyOption, SurveyResponse, SurveyAnswer } from "../../config/database";
+import { sequelize, Department, Survey, SurveyQuestion, SurveyOption, SurveyResponse, SurveyAnswer } from "../../config/database";
 
 type CreateResponseDTO = {
   surveyId: string;
@@ -17,7 +17,15 @@ type CreateAnswerDTO = {
 
 export class UserResponseRepository {
   static async getAllSurveys() {
-    return Survey.findAll();
+    return Survey.findAll({
+      include: [
+        {
+          model: Department,
+          as: "departments",
+          through: { attributes: [] }
+        }
+      ]
+    });
   }
 
   static async getSurveyById(surveyId: string) {
@@ -33,6 +41,11 @@ export class UserResponseRepository {
               as: "options"
             }
           ]
+        },
+        {
+          model: Department,
+          as: "departments",
+          through: { attributes: [] }
         }
       ]
     });

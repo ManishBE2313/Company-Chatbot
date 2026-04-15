@@ -4,31 +4,41 @@ import { UserResponseService } from "../../services/survey/user_response";
 
 export class UserResponseController {
 
-  // ✅ GET all surveys for user (WITH STATUS)
+  // helper to extract + validate identity
+  private static getIdentity(req: Request) {
+    const employeeId =
+      (req as Request & { user?: { id: string } }).user?.id || null;
+
+    const anonymousToken =
+      (req as Request & { anonymousToken?: string }).anonymousToken || null;
+
+    if (!employeeId && !anonymousToken) {
+      throw new Error("User not identified");
+    }
+
+    if (employeeId && anonymousToken) {
+      throw new Error("Invalid request: both employee and anonymous token present");
+    }
+
+    return { employeeId, anonymousToken };
+  }
+
   static async getUserSurveys(req: Request, res: Response, next: NextFunction) {
     try {
-
-      const employeeId =
-        (req as Request & { user?: { id: string } }).user?.id || null;
-
-      const anonymousToken =
-        (req as Request & { anonymousToken?: string }).anonymousToken || null;
+      const { employeeId, anonymousToken } = this.getIdentity(req);
 
       const surveys = await UserResponseService.getUserSurveys(
         employeeId,
         anonymousToken
       );
 
-      res.status(200).json({
-        data: surveys
-      });
+      res.status(200).json({ data: surveys });
 
     } catch (error) {
       next(error);
     }
   }
 
-  // ✅ GET single survey
   static async getSurvey(req: Request, res: Response, next: NextFunction) {
     try {
 
@@ -38,11 +48,7 @@ export class UserResponseController {
 
       validateQueryParams(req.params, validationRules);
 
-      const employeeId =
-        (req as Request & { user?: { id: string } }).user?.id || null;
-
-      const anonymousToken =
-        (req as Request & { anonymousToken?: string }).anonymousToken || null;
+      const { employeeId, anonymousToken } = this.getIdentity(req);
 
       const survey = await UserResponseService.getSurvey(
         employeeId,
@@ -50,16 +56,14 @@ export class UserResponseController {
         anonymousToken
       );
 
-      res.status(200).json({
-        data: survey
-      });
+      res.status(200).json({ data: survey });
 
     } catch (error) {
       next(error);
     }
   }
 
-  // ✅ SUBMIT survey response
+
   static async submitResponse(req: Request, res: Response, next: NextFunction) {
     try {
 
@@ -80,7 +84,13 @@ export class UserResponseController {
         throw new Error("answers must not be empty");
       }
 
-      // 🔥 Validate each answer
+      // duplicate question check
+      const questionIds = answers.map((a: any) => a.questionId);
+      if (new Set(questionIds).size !== questionIds.length) {
+        throw new Error("Duplicate answers for same question");
+      }
+
+      // validate each answer
       answers.forEach((a: any) => {
 
         validateQueryParams(a, {
@@ -88,20 +98,15 @@ export class UserResponseController {
         });
 
         if (!a.optionId && !a.text && a.rating === undefined) {
-          throw new Error(
-            "Each answer must have optionId, text, or rating"
-          );
+          throw new Error("Each answer must have optionId, text, or rating");
         }
 
-        // 🔥 Only one allowed
         if (
           Number(!!a.optionId) +
           Number(!!a.text) +
           Number(a.rating !== undefined) !== 1
         ) {
-          throw new Error(
-            "Only one answer type allowed per question"
-          );
+          throw new Error("Only one answer type allowed per question");
         }
 
         if (a.optionId) {
@@ -127,11 +132,7 @@ export class UserResponseController {
         }
       });
 
-      const employeeId =
-        (req as Request & { user?: { id: string } }).user?.id || null;
-
-      const anonymousToken =
-        (req as Request & { anonymousToken?: string }).anonymousToken || null;
+      const { employeeId, anonymousToken } = this.getIdentity(req);
 
       const response = await UserResponseService.submitResponse(
         employeeId,
@@ -140,7 +141,7 @@ export class UserResponseController {
         anonymousToken
       );
 
-      res.status(200).json({
+      res.status(201).json({
         message: "Response submitted successfully",
         data: response
       });

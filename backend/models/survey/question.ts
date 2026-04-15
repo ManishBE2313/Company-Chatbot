@@ -1,6 +1,6 @@
 "use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
-
+import { OptionInstance } from "./question_options";
 export interface QuestionAttributes {
   id: string;
   surveyId: string;
@@ -10,7 +10,9 @@ export interface QuestionAttributes {
 
 export interface QuestionInstance
   extends Model<QuestionAttributes>,
-    QuestionAttributes {}
+    QuestionAttributes {
+  options?: OptionInstance[];
+}
 
 export default function QuestionModel(
   sequelize: Sequelize,

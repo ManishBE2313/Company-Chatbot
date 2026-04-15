@@ -6,7 +6,7 @@ import {
   SurveyOption,
   Department,
 } from "../../config/database";
-
+ 
 interface CreateSurveyDTO {
   title: string;
   surveyType: "ATTRIBUTED" | "ANONYMOUS";
@@ -14,7 +14,7 @@ interface CreateSurveyDTO {
   endAt: Date;
   isForAllDepartments?: boolean;
 }
-
+ 
 export class SurveyRepository {
   static async createSurvey(
     data: CreateSurveyDTO,
@@ -22,7 +22,7 @@ export class SurveyRepository {
   ) {
     return Survey.create(data, { transaction });
   }
-
+ 
   static async findById(id: string) {
     return Survey.findOne({
       where: { id },
@@ -45,7 +45,7 @@ export class SurveyRepository {
       ],
     });
   }
-
+ 
   static async getAllSurveys(params: {
     status?: string;
     page: number;
@@ -55,25 +55,25 @@ export class SurveyRepository {
     departmentIds?: string[];
   }) {
     const { status, page, limit, sortBy, order, departmentIds } = params;
-
+ 
     const offset = (page - 1) * limit;
     const now = new Date();
-
+ 
     const where: any = {};
-
+ 
     if (status === "UPCOMING") {
       where.startAt = { [Op.gt]: now };
     }
-
+ 
     if (status === "ACTIVE") {
       where.startAt = { [Op.lte]: now };
       where.endAt = { [Op.gte]: now };
     }
-
+ 
     if (status === "EXPIRED") {
       where.endAt = { [Op.lt]: now };
     }
-
+ 
     const include: any[] = [
       {
         model: SurveyQuestion,
@@ -81,7 +81,7 @@ export class SurveyRepository {
         attributes: ["id"],
       },
     ];
-
+ 
     if (departmentIds && departmentIds.length > 0) {
       include.push({
         model: Department,
@@ -95,7 +95,7 @@ export class SurveyRepository {
         },
         through: { attributes: [] },
       });
-
+ 
       where[Op.or] = [
         { isForAllDepartments: true },
         {
@@ -105,7 +105,7 @@ export class SurveyRepository {
         },
       ];
     }
-
+ 
     return Survey.findAndCountAll({
       where,
       limit,
@@ -115,7 +115,7 @@ export class SurveyRepository {
       distinct: true,
     });
   }
-
+ 
   static async updateSurvey(
     id: string,
     data: any,

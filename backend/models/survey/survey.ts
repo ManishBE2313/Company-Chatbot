@@ -1,5 +1,8 @@
 "use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { SurveyDepartmentRefInstance } from "./department";
+import { QuestionInstance } from "./question";
+
 
 export interface SurveyAttributes {
   id: string;
@@ -9,11 +12,14 @@ export interface SurveyAttributes {
   endAt?: Date | null;
   isForAllDepartments: boolean;
 }
-
+ 
 export interface SurveyInstance
   extends Model<SurveyAttributes>,
-    SurveyAttributes {}
-
+    SurveyAttributes {
+ departments?: SurveyDepartmentRefInstance[];
+  questions?: QuestionInstance[];
+}
+ 
 export default function SurveyModel(
   sequelize: Sequelize,
   schema?: string
@@ -60,26 +66,26 @@ export default function SurveyModel(
       timestamps: true,
     }
   ) as ModelStatic<SurveyInstance> & { associate?: (models: any) => void };
-
+ 
   Survey.associate = (models: any) => {
     Survey.hasMany(models.question, {
       foreignKey: "surveyId",
       as: "questions",
       onDelete: "CASCADE",
     });
-
+ 
     Survey.hasMany(models.response, {
       foreignKey: "surveyId",
       as: "responses",
     });
-
-    Survey.belongsToMany(models.department, {
-      through: models.survey_department,
-      foreignKey: "surveyId",
-      otherKey: "departmentId",
-      as: "departments",
-    });
+ 
+    Survey.belongsToMany(models.surveyDepartment, {
+  through: models.survey_department,
+  foreignKey: "surveyId",
+  otherKey: "departmentId",
+  as: "departments",
+});
   };
-
+ 
   return Survey;
 }
