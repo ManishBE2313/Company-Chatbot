@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -43,6 +43,12 @@ export function EmployeePortalShell({
       href: employeeId ? `/employee/${employeeId}/timesheet` : '/employee',
       icon: <Clock3 size={16} />,
       match: (currentPath) => employeeId !== '' && currentPath.startsWith(`/employee/${employeeId}/timesheet`),
+    },
+    {
+      label: 'Survey',
+      href: employeeId ? `/employee/${employeeId}/surveys` : '/employee',
+      icon: <MessageSquareQuote size={16} />,
+      match: (currentPath) => employeeId !== '' && currentPath.startsWith(`/employee/${employeeId}/surveys`),
     },
   ];
 
@@ -122,5 +128,3 @@ export function EmployeePortalShell({
     </div>
   );
 }
-
-

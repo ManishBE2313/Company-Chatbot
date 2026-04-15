@@ -1,10 +1,26 @@
 import axios, { AxiosError, Method } from "axios";
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://127.0.0.1:8000";
+function resolveBackendBaseUrl() {
+  const candidates = [
+    process.env.NEXT_PUBLIC_BACKEND_URL,
+    process.env.NEXT_PUBLIC_API_URL2,
+    "http://127.0.0.1:3000",
+  ].filter((value): value is string => Boolean(value));
+
+  const preferred = candidates.find((value) => {
+    try {
+      const url = new URL(value);
+      return url.port !== "3001";
+    } catch {
+      return true;
+    }
+  });
+
+  return preferred ?? "http://127.0.0.1:3000";
+}
+
+const BACKEND_BASE_URL = resolveBackendBaseUrl();
 
 export async function proxyToBackend(
   request: NextRequest,

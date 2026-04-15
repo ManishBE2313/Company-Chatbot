@@ -36,6 +36,7 @@ import SurveyResponseModel from "../../models/survey/response";
 import SurveyAnswerModel from "../../models/survey/answer";
 import SurveyDepartmentJoinModel from "../../models/survey/survey_department";
 
+
 const isProduction = runtimeConfig.nodeEnv.toLowerCase() === "production";
 
 export const sequelize = new Sequelize(
@@ -95,6 +96,7 @@ export const SurveyResponse = SurveyResponseModel(sequelize);
 export const SurveyAnswer = SurveyAnswerModel(sequelize);
 export const SurveyDepartmentJoin = SurveyDepartmentJoinModel(sequelize);
 
+
 const models = {
   organization: Organization,
   department: Department,
@@ -130,6 +132,7 @@ const models = {
   response: SurveyResponse,
   answer: SurveyAnswer,
   survey_department: SurveyDepartmentJoin,
+  surveyDepartment: Department,
   // candidateTrace: CandidateTrace,
   // jobTraceability: JobTraceability,
 };
@@ -148,3 +151,4 @@ export function getMainDbModel<T extends MainDbModelName>(modelName: T) {
 }
 
 export { models };
+

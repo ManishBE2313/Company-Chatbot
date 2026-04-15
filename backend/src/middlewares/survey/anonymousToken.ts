@@ -1,25 +1,23 @@
-import { Request, Response, NextFunction } from "express";
+﻿import { Request, Response, NextFunction } from "express";
 import { randomUUID } from "crypto";
 
-export const anonymousTokenMiddleware = (req: Request,res: Response,next: NextFunction) => {
+export const anonymousTokenMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {
     let token = req.cookies?.anonymousToken;
 
-    //If token not present → generate new one
     if (!token) {
       token = randomUUID();
-       res.cookie("anonymousToken", token, {
-        httpOnly: true,     // not accessible via JS (secure)
+      res.cookie("anonymousToken", token, {
+        httpOnly: true,
+        secure: false, // true in production
         sameSite: "lax",
-        maxAge: 1000 * 60 * 60 * 24 * 100 // 100 days
+        maxAge: 1000 * 60 * 60 * 24 * 100,
       });
     }
 
-    //Attach token to request
     (req as Request & { anonymousToken?: string }).anonymousToken = token;
 
     next();
-
   } catch (error) {
     next(error);
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { SurveyBuilder } from "@/components/survey/SurveyBuilder";
 import { SurveyDashboard } from "@/components/survey/SurveyDashboard";
 import { showToast } from "@/components/ui/Toast";
@@ -10,6 +11,7 @@ import { getJobFormCatalog } from "@/services/hrApiClient";
 import { SurveyDepartmentRef } from "@/types/survey";
 
 export default function HRSurveysPage() {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const { surveys, currentDraft, filters, fetchStatus, publishStatus, error } = useAppSelector((state) => state.surveyAdmin);
   const [departmentOptions, setDepartmentOptions] = React.useState<SurveyDepartmentRef[]>([]);
@@ -259,6 +261,7 @@ export default function HRSurveysPage() {
           filters={filters}
           onFiltersChange={handleFiltersChange}
           onCreateNewSurvey={handleCreateSurvey}
+          onOpenAnalytics={(surveyId) => router.push(`/hr/surveys/${surveyId}`)}
           isLoading={fetchStatus === "loading"}
         />
       )}

@@ -1,4 +1,4 @@
-import cookieParser from "cookie-parser";
+﻿import cookieParser from "cookie-parser";
 import express, { NextFunction, Request, Response } from "express";
 import authRouter from "./routes/auth";
 import candidateRouter from "./routes/candidate";
@@ -23,6 +23,7 @@ import traceabilityRoutes from "./routes/traceability";
 import { models } from "./config/database";
 import { startSlotSyncCron } from "./cron/syncInterviewSlots";
 import surveyRouter from "./routes/survey/create_survey";
+import surveyUserResponseRouter from "./routes/survey/user_response";
 dotenv.config();
 
 const app = express();
@@ -61,8 +62,9 @@ app.use("/api/scorecard", scorecardRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/slots", interviewSlotRouter);
 app.use("/api/interviews", interviewRouter);
-app.use("/api/employee", EmployeeRouter)
+app.use("/api/employee", EmployeeRouter);
 app.use("/api/hr/jobs/:jobId", batchIngestRouter);
+app.use("/api/surveys", surveyUserResponseRouter);
 app.use("/api/surveys", surveyRouter);
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(new Errors.BadRequestError("Route not found: " + req.method + " " + req.originalUrl));

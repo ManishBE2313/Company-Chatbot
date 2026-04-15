@@ -1,4 +1,4 @@
-import { Transaction } from "sequelize";
+﻿import { Op, Transaction } from "sequelize";
 import { sequelize, Department, Survey, SurveyQuestion, SurveyOption, SurveyResponse, SurveyAnswer } from "../../config/database";
 
 type CreateResponseDTO = {
@@ -22,9 +22,9 @@ export class UserResponseRepository {
         {
           model: Department,
           as: "departments",
-          through: { attributes: [] }
-        }
-      ]
+          through: { attributes: [] },
+        },
+      ],
     });
   }
 
@@ -38,16 +38,16 @@ export class UserResponseRepository {
           include: [
             {
               model: SurveyOption,
-              as: "options"
-            }
-          ]
+              as: "options",
+            },
+          ],
         },
         {
           model: Department,
           as: "departments",
-          through: { attributes: [] }
-        }
-      ]
+          through: { attributes: [] },
+        },
+      ],
     });
   }
 
@@ -55,52 +55,42 @@ export class UserResponseRepository {
     return SurveyResponse.findOne({
       where: {
         employeeId,
-        surveyId
-      }
+        surveyId,
+      },
     });
   }
 
-  static async findAnonymousResponse(
-    anonymousToken: string,
-    surveyId: string
-  ) {
+  static async findAnonymousResponse(anonymousToken: string, surveyId: string) {
     return SurveyResponse.findOne({
       where: {
         anonymousToken,
-        surveyId
-      }
+        surveyId,
+      },
     });
   }
 
-  static async getUserResponses(
-    employeeId: string | null,
-    anonymousToken: string | null
-  ) {
-    const where: any = {};
+  static async getUserResponses(employeeId: string | null, anonymousToken: string | null) {
+    const filters: Record<string, unknown>[] = [];
 
     if (employeeId) {
-      where.employeeId = employeeId;
-    } else if (anonymousToken) {
-      where.anonymousToken = anonymousToken;
+      filters.push({ employeeId });
+    }
+
+    if (anonymousToken) {
+      filters.push({ anonymousToken });
     }
 
     return SurveyResponse.findAll({
-      where,
-      attributes: ["surveyId"]
+      where: filters.length > 0 ? { [Op.or]: filters } : undefined,
+      attributes: ["surveyId"],
     });
   }
 
-  static async createResponse(
-    data: CreateResponseDTO,
-    transaction: Transaction
-  ) {
+  static async createResponse(data: CreateResponseDTO, transaction: Transaction) {
     return SurveyResponse.create(data, { transaction });
   }
 
-  static async bulkCreateAnswers(
-    data: CreateAnswerDTO[],
-    transaction: Transaction
-  ) {
+  static async bulkCreateAnswers(data: CreateAnswerDTO[], transaction: Transaction) {
     return SurveyAnswer.bulkCreate(data, { transaction });
   }
 }

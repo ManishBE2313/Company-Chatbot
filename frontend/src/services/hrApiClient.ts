@@ -20,8 +20,14 @@ import {
 } from "@/types/hr";
 import {
   SurveyAdminFilters,
+  SurveyAggregatedData,
+  SurveyAnalyticsBucket,
+  SurveyIndividualResponse,
   SurveyPublishPayload,
+  SurveyQuestionAnalytics,
   SurveySummary,
+  SurveyTextComment,
+  SURVEY_K_ANONYMITY_THRESHOLD,
   normalizeSurveyStatus,
 } from "@/types/survey";
 
@@ -69,6 +75,173 @@ function withUserEmail(email: string) {
   };
 }
 
+function normalizeSurveySummary(
+  survey: Omit<SurveySummary, "status"> & { status?: string }
+): SurveySummary {
+  return {
+    ...survey,
+    status: normalizeSurveyStatus(survey.status),
+  };
+}
+
+function toNumber(value: unknown, fallback = 0) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeDistribution(items: unknown): SurveyAnalyticsBucket[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.map((item, index) => {
+    const bucket = item as Record<string, unknown>;
+    const count = toNumber(bucket.count ?? bucket.responses ?? bucket.total);
+    const percentage = toNumber(bucket.percentage ?? bucket.percent);
+
+    return {
+      optionId: typeof bucket.optionId === "string" ? bucket.optionId : undefined,
+      label:
+        typeof bucket.label === "string"
+          ? bucket.label
+          : typeof bucket.text === "string"
+          ? bucket.text
+          : typeof bucket.optionText === "string"
+          ? bucket.optionText
+          : `Option ${index + 1}`,
+      count,
+      percentage,
+    };
+  });
+}
+
+function normalizeTextComments(items: unknown, questionId: string, questionText: string): SurveyTextComment[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((item, index) => {
+      const comment = item as Record<string, unknown>;
+
+      return {
+        answerId:
+          typeof comment.answerId === "string"
+            ? comment.answerId
+            : typeof comment.id === "string"
+            ? comment.id
+            : `${questionId}-comment-${index}`,
+        questionId,
+        questionText,
+        text: typeof comment.text === "string" ? comment.text : "",
+        responseId: typeof comment.responseId === "string" ? comment.responseId : undefined,
+        employeeId: typeof comment.employeeId === "string" ? comment.employeeId : null,
+        employeeName: typeof comment.employeeName === "string" ? comment.employeeName : null,
+        department: typeof comment.department === "string" ? comment.department : null,
+        tenure: typeof comment.tenure === "string" ? comment.tenure : null,
+        submittedAt: typeof comment.submittedAt === "string" ? comment.submittedAt : null,
+      };
+    })
+    .filter((comment) => comment.text.trim().length > 0);
+}
+
+function normalizeQuestionAnalytics(items: unknown): SurveyQuestionAnalytics[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.map((item, index) => {
+    const question = item as Record<string, unknown>;
+    const questionId =
+      typeof question.questionId === "string"
+        ? question.questionId
+        : typeof question.id === "string"
+        ? question.id
+        : `question-${index}`;
+    const questionText =
+      typeof question.questionText === "string"
+        ? question.questionText
+        : typeof question.title === "string"
+        ? question.title
+        : `Question ${index + 1}`;
+
+    return {
+      questionId,
+      questionText,
+      type:
+        question.type === "mcq" || question.type === "rating" || question.type === "text"
+          ? question.type
+          : "text",
+      responseCount: toNumber(question.responseCount ?? question.totalResponses),
+      averageRating:
+        typeof question.averageRating === "number"
+          ? question.averageRating
+          : typeof question.average === "number"
+          ? question.average
+          : null,
+      distribution: normalizeDistribution(
+        question.distribution ?? question.options ?? question.breakdown
+      ),
+      comments: normalizeTextComments(
+        question.comments ?? question.textResponses,
+        questionId,
+        questionText
+      ),
+    };
+  });
+}
+
+function normalizeIndividualResponses(items: unknown): SurveyIndividualResponse[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.map((item, index) => {
+    const response = item as Record<string, unknown>;
+    const answers = Array.isArray(response.answers) ? response.answers : [];
+
+    return {
+      responseId:
+        typeof response.responseId === "string"
+          ? response.responseId
+          : typeof response.id === "string"
+          ? response.id
+          : `response-${index}`,
+      employeeId: typeof response.employeeId === "string" ? response.employeeId : null,
+      employeeName: typeof response.employeeName === "string" ? response.employeeName : null,
+      department: typeof response.department === "string" ? response.department : null,
+      tenure: typeof response.tenure === "string" ? response.tenure : null,
+      submittedAt: typeof response.submittedAt === "string" ? response.submittedAt : null,
+      answers: answers.map((answer, answerIndex) => {
+        const answerValue = answer as Record<string, unknown>;
+
+        return {
+          questionId:
+            typeof answerValue.questionId === "string"
+              ? answerValue.questionId
+              : `answer-question-${answerIndex}`,
+          questionText:
+            typeof answerValue.questionText === "string"
+              ? answerValue.questionText
+              : `Question ${answerIndex + 1}`,
+          type:
+            answerValue.type === "mcq" || answerValue.type === "rating" || answerValue.type === "text"
+              ? answerValue.type
+              : "text",
+          optionId: typeof answerValue.optionId === "string" ? answerValue.optionId : undefined,
+          optionText:
+            typeof answerValue.optionText === "string"
+              ? answerValue.optionText
+              : typeof answerValue.textLabel === "string"
+              ? answerValue.textLabel
+              : undefined,
+          text: typeof answerValue.text === "string" ? answerValue.text : undefined,
+          rating: typeof answerValue.rating === "number" ? answerValue.rating : undefined,
+        };
+      }),
+    };
+  });
+}
+
 export async function getHRCurrentUser(): Promise<HRUser> {
   try {
     const response = await fastApiClient.get<HRUser>("/api/user/me");
@@ -96,7 +269,6 @@ export async function getJobs(): Promise<Job[]> {
   }
 }
 
-
 export async function getAdminSurveys(
   filters?: Partial<SurveyAdminFilters>
 ): Promise<SurveySummary[]> {
@@ -109,10 +281,7 @@ export async function getAdminSurveys(
       >;
     }>("/api/hr/surveys");
 
-    const surveys = response.data.data.map((survey) => ({
-      ...survey,
-      status: normalizeSurveyStatus(survey.status),
-    }));
+    const surveys = response.data.data.map((survey) => normalizeSurveySummary(survey));
 
     return surveys.filter((survey) => {
       const statusMatch =
@@ -139,14 +308,71 @@ export async function publishAdminSurvey(
       data: Omit<SurveySummary, "status"> & { status?: string };
     }>("/api/hr/surveys", payload);
 
-    return {
-      ...response.data.data,
-      status: normalizeSurveyStatus(response.data.data.status),
-    };
+    return normalizeSurveySummary(response.data.data);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Failed to publish survey."));
   }
 }
+
+export async function getAdminSurveyById(surveyId: string): Promise<SurveySummary> {
+  try {
+    const response = await nextApiClient.get<{
+      data: Omit<SurveySummary, "status"> & { status?: string };
+    }>(`/api/hr/surveys/${surveyId}`);
+
+    return normalizeSurveySummary(response.data.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch survey."));
+  }
+}
+
+export async function getSurveyAnalytics(surveyId: string): Promise<{
+  aggregatedData: SurveyAggregatedData;
+  individualResponses: SurveyIndividualResponse[];
+  responseCount: number;
+  minimumResponseThreshold: number;
+}> {
+  try {
+    const response = await nextApiClient.get<{ data: Record<string, unknown> }>(
+      `/api/hr/surveys/${surveyId}/analytics`
+    );
+
+    const payload = response.data.data ?? {};
+    const aggregatedSource =
+      (payload.aggregatedData as Record<string, unknown> | undefined) ??
+      (payload.aggregated as Record<string, unknown> | undefined) ??
+      {};
+    const questions = normalizeQuestionAnalytics(
+      aggregatedSource.questions ?? payload.questions
+    );
+    const averageRating =
+      typeof aggregatedSource.averageRating === "number"
+        ? aggregatedSource.averageRating
+        : typeof payload.averageRating === "number"
+        ? payload.averageRating
+        : null;
+
+    return {
+      aggregatedData: {
+        averageRating,
+        questions,
+      },
+      individualResponses: normalizeIndividualResponses(
+        payload.individualResponses ?? payload.responses
+      ),
+      responseCount: toNumber(
+        payload.responseCount ?? aggregatedSource.responseCount
+      ),
+      minimumResponseThreshold: toNumber(
+        payload.minimumResponseThreshold ?? payload.kAnonymityThreshold,
+        SURVEY_K_ANONYMITY_THRESHOLD
+      ),
+    };
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Failed to fetch survey analytics."));
+  }
+}
+
 export async function getJobById(jobId: string): Promise<Job> {
   try {
     const response = await nextApiClient.get<{ data: Job }>(`/api/hr/jobs/${jobId}`);
@@ -410,5 +636,3 @@ export async function reviewTimesheet(timesheetId: string, status: "approved" | 
     throw new Error(getErrorMessage(error, "Failed to update timesheet status."));
   }
 }
-
-

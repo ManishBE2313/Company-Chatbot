@@ -6,7 +6,7 @@ import {
   getEmployeeSurveys,
   submitEmployeeSurveyResponse,
 } from "@/services/apiClient";
-import { SurveyAnswerInput, SurveySummary } from "@/types/survey";
+import { SurveyAnswerInput, SurveySummary, sanitizeSurveyAnswer } from "@/types/survey";
 
 interface SurveyEmployeeState {
   mySurveys: SurveySummary[];
@@ -46,17 +46,19 @@ export const fetchEmployeeSurveys = createAsyncThunk<
   }
 });
 
-export const fetchActiveSurvey = createAsyncThunk<
+export const fetchSurveyDetails = createAsyncThunk<
   SurveySummary,
   string,
   { rejectValue: string }
->("surveyEmployee/fetchActiveSurvey", async (surveyId, { rejectWithValue }) => {
+>("surveyEmployee/fetchSurveyDetails", async (surveyId, { rejectWithValue }) => {
   try {
     return await getEmployeeSurveyById(surveyId);
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, "Failed to fetch survey."));
   }
 });
+
+export const fetchActiveSurvey = fetchSurveyDetails;
 
 export const submitSurveyResponse = createAsyncThunk<
   { surveyId: string; answers: SurveyAnswerInput[] },
@@ -66,8 +68,9 @@ export const submitSurveyResponse = createAsyncThunk<
   "surveyEmployee/submitSurveyResponse",
   async ({ surveyId, answers }, { rejectWithValue }) => {
     try {
-      await submitEmployeeSurveyResponse(surveyId, answers);
-      return { surveyId, answers };
+      const sanitizedAnswers = answers.map((answer) => sanitizeSurveyAnswer(answer));
+      await submitEmployeeSurveyResponse(surveyId, sanitizedAnswers);
+      return { surveyId, answers: sanitizedAnswers };
     } catch (error) {
       return rejectWithValue(
         getErrorMessage(error, "Failed to submit survey response.")
@@ -101,15 +104,15 @@ const surveyEmployeeSlice = createSlice({
         state.listStatus = "failed";
         state.error = action.payload || "Failed to fetch surveys.";
       })
-      .addCase(fetchActiveSurvey.pending, (state) => {
+      .addCase(fetchSurveyDetails.pending, (state) => {
         state.detailStatus = "loading";
         state.error = null;
       })
-      .addCase(fetchActiveSurvey.fulfilled, (state, action) => {
+      .addCase(fetchSurveyDetails.fulfilled, (state, action) => {
         state.detailStatus = "succeeded";
         state.activeSurvey = action.payload;
       })
-      .addCase(fetchActiveSurvey.rejected, (state, action) => {
+      .addCase(fetchSurveyDetails.rejected, (state, action) => {
         state.detailStatus = "failed";
         state.error = action.payload || "Failed to fetch survey.";
       })

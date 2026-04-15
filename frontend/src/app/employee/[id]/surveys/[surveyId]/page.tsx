@@ -4,9 +4,13 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { SurveyResponder } from "@/components/survey/SurveyResponder";
 import { showToast } from "@/components/ui/Toast";
-import { clearActiveSurvey, fetchActiveSurvey, submitSurveyResponse } from "@/lib/redux/features/survey/surveyEmployeeSlice";
+import {
+  clearActiveSurvey,
+  fetchSurveyDetails,
+  submitSurveyResponse,
+} from "@/lib/redux/features/survey/surveyEmployeeSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/redux";
-import { SurveyAnswerInput } from "@/types/survey";
+import { useSurveyAnswers } from "@/components/survey/useSurveyAnswers";
 
 export default function EmployeeSurveyDetailPage({
   params,
@@ -17,7 +21,7 @@ export default function EmployeeSurveyDetailPage({
   const dispatch = useAppDispatch();
   const { activeSurvey, detailStatus, submitStatus, error } = useAppSelector((state) => state.surveyEmployee);
   const [routeParams, setRouteParams] = React.useState<{ id: string; surveyId: string } | null>(null);
-  const [answers, setAnswers] = React.useState<Record<string, SurveyAnswerInput>>({});
+  const { answers, answerList, canSubmit, setAnswer } = useSurveyAnswers(activeSurvey);
 
   React.useEffect(() => {
     params.then((value) => setRouteParams(value));
@@ -28,7 +32,7 @@ export default function EmployeeSurveyDetailPage({
       return;
     }
 
-    void dispatch(fetchActiveSurvey(routeParams.surveyId));
+    void dispatch(fetchSurveyDetails(routeParams.surveyId));
 
     return () => {
       dispatch(clearActiveSurvey());
@@ -54,7 +58,7 @@ export default function EmployeeSurveyDetailPage({
       await dispatch(
         submitSurveyResponse({
           surveyId: routeParams.surveyId,
-          answers: Object.values(answers),
+          answers: answerList,
         })
       ).unwrap();
 
@@ -72,7 +76,7 @@ export default function EmployeeSurveyDetailPage({
         type: "error",
       });
     }
-  }, [activeSurvey, answers, dispatch, routeParams, router]);
+  }, [activeSurvey, answerList, dispatch, routeParams, router]);
 
   if (!activeSurvey || detailStatus === "loading" || !routeParams) {
     return <div className="px-6 py-10 text-sm text-slate-500">Loading survey...</div>;
@@ -82,12 +86,8 @@ export default function EmployeeSurveyDetailPage({
     <SurveyResponder
       survey={activeSurvey}
       answers={answers}
-      onAnswerChange={(answer) =>
-        setAnswers((current) => ({
-          ...current,
-          [answer.questionId]: answer,
-        }))
-      }
+      canSubmit={canSubmit}
+      onAnswerChange={setAnswer}
       onSubmit={handleSubmit}
       onBack={() => router.push(`/employee/${routeParams.id}/surveys`)}
       isSubmitting={submitStatus === "loading"}

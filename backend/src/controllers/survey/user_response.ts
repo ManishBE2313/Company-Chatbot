@@ -1,10 +1,8 @@
-import { Request, Response, NextFunction } from "express";
+﻿import { Request, Response, NextFunction } from "express";
 import { validateQueryParams, QueryValidationRules } from "../../utils/validation";
 import { UserResponseService } from "../../services/survey/user_response";
 
 export class UserResponseController {
-
-  // helper to extract + validate identity
   private static getIdentity(req: Request) {
     const employeeId =
       (req as Request & { user?: { id: string } }).user?.id || null;
@@ -14,10 +12,6 @@ export class UserResponseController {
 
     if (!employeeId && !anonymousToken) {
       throw new Error("User not identified");
-    }
-
-    if (employeeId && anonymousToken) {
-      throw new Error("Invalid request: both employee and anonymous token present");
     }
 
     return { employeeId, anonymousToken };
@@ -33,7 +27,6 @@ export class UserResponseController {
       );
 
       res.status(200).json({ data: surveys });
-
     } catch (error) {
       next(error);
     }
@@ -41,9 +34,8 @@ export class UserResponseController {
 
   static async getSurvey(req: Request, res: Response, next: NextFunction) {
     try {
-
       const validationRules: QueryValidationRules = {
-        surveyId: { type: "uuid", required: true }
+        surveyId: { type: "uuid", required: true },
       };
 
       validateQueryParams(req.params, validationRules);
@@ -57,22 +49,19 @@ export class UserResponseController {
       );
 
       res.status(200).json({ data: survey });
-
     } catch (error) {
       next(error);
     }
   }
 
-
   static async submitResponse(req: Request, res: Response, next: NextFunction) {
     try {
-
       const paramRules: QueryValidationRules = {
-        surveyId: { type: "uuid", required: true }
+        surveyId: { type: "uuid", required: true },
       };
 
       const bodyRules: QueryValidationRules = {
-        answers: { type: "array", required: true }
+        answers: { type: "array", required: true },
       };
 
       validateQueryParams(req.params, paramRules);
@@ -84,17 +73,14 @@ export class UserResponseController {
         throw new Error("answers must not be empty");
       }
 
-      // duplicate question check
       const questionIds = answers.map((a: any) => a.questionId);
       if (new Set(questionIds).size !== questionIds.length) {
         throw new Error("Duplicate answers for same question");
       }
 
-      // validate each answer
       answers.forEach((a: any) => {
-
         validateQueryParams(a, {
-          questionId: { type: "uuid", required: true }
+          questionId: { type: "uuid", required: true },
         });
 
         if (!a.optionId && !a.text && a.rating === undefined) {
@@ -103,21 +89,22 @@ export class UserResponseController {
 
         if (
           Number(!!a.optionId) +
-          Number(!!a.text) +
-          Number(a.rating !== undefined) !== 1
+            Number(!!a.text) +
+            Number(a.rating !== undefined) !==
+          1
         ) {
           throw new Error("Only one answer type allowed per question");
         }
 
         if (a.optionId) {
           validateQueryParams(a, {
-            optionId: { type: "uuid" }
+            optionId: { type: "uuid" },
           });
         }
 
         if (a.text) {
           validateQueryParams(a, {
-            text: { type: "string", min: 1, max: 1000 }
+            text: { type: "string", min: 1, max: 1000 },
           });
         }
 
@@ -143,9 +130,8 @@ export class UserResponseController {
 
       res.status(201).json({
         message: "Response submitted successfully",
-        data: response
+        data: response,
       });
-
     } catch (error) {
       next(error);
     }

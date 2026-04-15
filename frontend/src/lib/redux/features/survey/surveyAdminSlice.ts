@@ -1,11 +1,20 @@
 "use client";
 
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { getAdminSurveys, publishAdminSurvey } from "@/services/hrApiClient";
+import {
+  getAdminSurveyById,
+  getAdminSurveys,
+  getSurveyAnalytics,
+  publishAdminSurvey,
+} from "@/services/hrApiClient";
 import {
   SurveyAdminFilters,
+  SurveyAggregatedData,
+  SurveyAnalyticsData,
   SurveyDraft,
+  SurveyIndividualResponse,
   SurveySummary,
+  SURVEY_K_ANONYMITY_THRESHOLD,
   buildEmptySurveyDraft,
   toSurveyPublishPayload,
 } from "@/types/survey";
@@ -14,8 +23,14 @@ interface SurveyAdminState {
   surveys: SurveySummary[];
   currentDraft: SurveyDraft | null;
   filters: SurveyAdminFilters;
+  activeSurvey: SurveySummary | null;
+  aggregatedData: SurveyAggregatedData | null;
+  individualResponses: SurveyIndividualResponse[];
+  responseCount: number;
+  minimumResponseThreshold: number;
   fetchStatus: "idle" | "loading" | "succeeded" | "failed";
   publishStatus: "idle" | "loading" | "succeeded" | "failed";
+  analyticsStatus: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
@@ -26,8 +41,14 @@ const initialState: SurveyAdminState = {
     status: "ALL",
     type: "ALL",
   },
+  activeSurvey: null,
+  aggregatedData: null,
+  individualResponses: [],
+  responseCount: 0,
+  minimumResponseThreshold: SURVEY_K_ANONYMITY_THRESHOLD,
   fetchStatus: "idle",
   publishStatus: "idle",
+  analyticsStatus: "idle",
   error: null,
 };
 
@@ -95,6 +116,29 @@ export const publishSurvey = createAsyncThunk<
   }
 });
 
+export const fetchSurveyAnalytics = createAsyncThunk<
+  SurveyAnalyticsData,
+  string,
+  { rejectValue: string }
+>("surveyAdmin/fetchSurveyAnalytics", async (surveyId, { rejectWithValue }) => {
+  try {
+    const [survey, analytics] = await Promise.all([
+      getAdminSurveyById(surveyId),
+      getSurveyAnalytics(surveyId),
+    ]);
+
+    return {
+      survey,
+      aggregatedData: analytics.aggregatedData,
+      individualResponses: analytics.individualResponses,
+      responseCount: analytics.responseCount,
+      minimumResponseThreshold: analytics.minimumResponseThreshold,
+    };
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error, "Failed to fetch survey analytics."));
+  }
+});
+
 const surveyAdminSlice = createSlice({
   name: "surveyAdmin",
   initialState,
@@ -108,6 +152,15 @@ const surveyAdminSlice = createSlice({
     clearSurveyDraft(state) {
       state.currentDraft = null;
       state.publishStatus = "idle";
+      state.error = null;
+    },
+    clearActiveAnalytics(state) {
+      state.activeSurvey = null;
+      state.aggregatedData = null;
+      state.individualResponses = [];
+      state.responseCount = 0;
+      state.minimumResponseThreshold = SURVEY_K_ANONYMITY_THRESHOLD;
+      state.analyticsStatus = "idle";
       state.error = null;
     },
   },
@@ -152,11 +205,27 @@ const surveyAdminSlice = createSlice({
       .addCase(publishSurvey.rejected, (state, action) => {
         state.publishStatus = "failed";
         state.error = action.payload || "Failed to publish survey.";
+      })
+      .addCase(fetchSurveyAnalytics.pending, (state) => {
+        state.analyticsStatus = "loading";
+        state.error = null;
+      })
+      .addCase(fetchSurveyAnalytics.fulfilled, (state, action) => {
+        state.analyticsStatus = "succeeded";
+        state.activeSurvey = action.payload.survey;
+        state.aggregatedData = action.payload.aggregatedData;
+        state.individualResponses = action.payload.individualResponses;
+        state.responseCount = action.payload.responseCount;
+        state.minimumResponseThreshold = action.payload.minimumResponseThreshold;
+      })
+      .addCase(fetchSurveyAnalytics.rejected, (state, action) => {
+        state.analyticsStatus = "failed";
+        state.error = action.payload || "Failed to fetch survey analytics.";
       });
   },
 });
 
-export const { setSurveyAdminFilters, clearSurveyDraft } =
+export const { setSurveyAdminFilters, clearSurveyDraft, clearActiveAnalytics } =
   surveyAdminSlice.actions;
 
 export default surveyAdminSlice.reducer;
