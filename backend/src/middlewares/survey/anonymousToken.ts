@@ -11,7 +11,7 @@ export const anonymousTokenMiddleware = (req: Request,res: Response,next: NextFu
        res.cookie("anonymousToken", token, {
         httpOnly: true,     // not accessible via JS (secure)
         sameSite: "lax",
-        maxAge: 1000 * 60 * 60 * 24 * 100 // 1 year
+        maxAge: 1000 * 60 * 60 * 24 * 100 // 100 days
       });
     }
 
