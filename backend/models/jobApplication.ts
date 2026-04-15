@@ -1,20 +1,33 @@
-"use strict";
+﻿"use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
+
+export type ApplicationStatus =
+  | "PENDING"
+  | "SCREENED"
+  | "SCHEDULING"
+  | "SCHEDULED"
+  | "EVALUATING"
+  | "OFFERED"
+  | "REJECTED"
+  | "WITHDRAWN";
 
 export interface JobApplicationAttributes {
   id: string;
+  organizationId: string;
   candidateId: string;
   jobId: string;
   resumeUrl: string;
-  status: "Pending" | "Passed" | "Rejected" | "Interviewing" | "Offered" | "ManualReview";
+  status: ApplicationStatus;
+  currentStage?: string | null;
+  priorityScore?: number | null;
+  rescheduleCount?: number;
   aiScore?: number | null;
   aiTags?: Record<string, unknown> | unknown[] | null;
   aiReasoning?: string | null;
 }
 
-export interface JobApplicationInstance
-  extends Model<JobApplicationAttributes>,
-    JobApplicationAttributes {}
+export interface JobApplicationInstance extends Model<JobApplicationAttributes>, JobApplicationAttributes {}
 
 export default function JobApplicationModel(
   sequelize: Sequelize,
@@ -29,6 +42,16 @@ export default function JobApplicationModel(
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
+      },
+      organizationId: {
+        type: DataTypes.UUID,
+        field: "organization_id",
+        allowNull: false,
+        defaultValue: DEFAULT_ORGANIZATION_ID,
+        references: {
+          model: "organizations",
+          key: "id",
+        },
       },
       candidateId: {
         type: DataTypes.UUID,
@@ -54,8 +77,32 @@ export default function JobApplicationModel(
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM("Pending", "Passed", "Rejected", "Interviewing", "Offered", "ManualReview"),
-        defaultValue: "Pending",
+        type: DataTypes.ENUM(
+          "PENDING",
+          "SCREENED",
+          "SCHEDULING",
+          "SCHEDULED",
+          "EVALUATING",
+          "OFFERED",
+          "REJECTED",
+          "WITHDRAWN"
+        ),
+        defaultValue: "PENDING",
+      },
+      currentStage: {
+        type: DataTypes.STRING,
+        field: "current_stage",
+        allowNull: true,
+      },
+      priorityScore: {
+        type: DataTypes.FLOAT,
+        field: "priority_score",
+        allowNull: true,
+      },
+      rescheduleCount: {
+        type: DataTypes.INTEGER,
+        field: "reschedule_count",
+        defaultValue: 0,
       },
       aiScore: {
         type: DataTypes.INTEGER,
@@ -63,7 +110,7 @@ export default function JobApplicationModel(
         allowNull: true,
       },
       aiTags: {
-        type: DataTypes.JSONB,
+        type: DataTypes.JSON,
         field: "ai_tags",
         allowNull: true,
       },
@@ -84,14 +131,25 @@ export default function JobApplicationModel(
   };
 
   JobApplication.associate = (models: any) => {
+    JobApplication.belongsTo(models.organization, {
+      foreignKey: "organizationId",
+      as: "organization",
+    });
     JobApplication.belongsTo(models.candidate, {
       foreignKey: "candidateId",
       as: "candidate",
     });
-
     JobApplication.belongsTo(models.job, {
       foreignKey: "jobId",
       as: "job",
+    });
+    JobApplication.hasMany(models.interview, {
+      foreignKey: "applicationId",
+      as: "interviews",
+    });
+    JobApplication.hasMany(models.pipelineEvent, {
+      foreignKey: "applicationId",
+      as: "events",
     });
   };
 

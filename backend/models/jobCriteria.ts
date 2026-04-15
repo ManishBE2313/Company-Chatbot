@@ -1,16 +1,16 @@
-"use strict";
+﻿"use strict";
 import { Model, DataTypes, Sequelize, ModelStatic } from "sequelize";
+import { DEFAULT_ORGANIZATION_ID } from "../src/constants/system";
 
 export interface JobCriteriaAttributes {
   id: string;
+  organizationId: string;
   jobId: string;
   requirements: Record<string, unknown>;
   isActive?: boolean;
 }
 
-export interface JobCriteriaInstance
-  extends Model<JobCriteriaAttributes>,
-    JobCriteriaAttributes {}
+export interface JobCriteriaInstance extends Model<JobCriteriaAttributes>, JobCriteriaAttributes {}
 
 export default function JobCriteriaModel(
   sequelize: Sequelize,
@@ -26,6 +26,16 @@ export default function JobCriteriaModel(
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      organizationId: {
+        type: DataTypes.UUID,
+        field: "organization_id",
+        allowNull: false,
+        defaultValue: DEFAULT_ORGANIZATION_ID,
+        references: {
+          model: "organizations",
+          key: "id",
+        },
+      },
       jobId: {
         type: DataTypes.UUID,
         field: "job_id",
@@ -37,7 +47,7 @@ export default function JobCriteriaModel(
         },
       },
       requirements: {
-        type: DataTypes.JSONB,
+        type: DataTypes.JSON,
         allowNull: false,
       },
       isActive: {
@@ -57,6 +67,7 @@ export default function JobCriteriaModel(
   };
 
   JobCriteria.associate = (models: any) => {
+    JobCriteria.belongsTo(models.organization, { foreignKey: "organizationId", as: "organization" });
     JobCriteria.belongsTo(models.job, {
       foreignKey: "jobId",
       as: "job",

@@ -1,7 +1,15 @@
 // src/services/apiClient.ts
 import { ChatApiRequest } from "@/types/chat";
+import {
+  SurveyAnswerInput,
+  SurveySummary,
+  normalizeSurveyStatus,
+} from "@/types/survey";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL2 = process.env.NEXT_PUBLIC_API_URL2 || "http://localhost:3000";
+const CHAT_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:8000";
 
 export interface CurrentUser {
   email: string | null;
@@ -19,7 +27,7 @@ export async function streamChatMessage(
   onChunk: (chunk: string) => void
 ): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    const response = await fetch(`${CHAT_API_BASE_URL}/api/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,7 +90,7 @@ export async function streamChatMessage(
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
-  const response = await fetch(`${API_BASE_URL}/api/user/me`, {
+  const response = await fetch(`/api/user/me`, {
     method: "GET",
     credentials: "include",
     cache: "no-store",
@@ -95,9 +103,23 @@ export async function getCurrentUser(): Promise<CurrentUser> {
 
   return response.json();
 }
+export async function getEmployeeDetails() {
+  const response = await fetch(`${API_BASE_URL2}/api/employee/details`, {
+    method: "GET",
+    credentials: "include", 
+    cache: "no-store",
+  });
 
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || `Server error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.data; // employee object
+}
 export async function logoutUser(): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+  const response = await fetch(`${AUTH_API_BASE_URL}/api/auth/logout`, {
     method: "POST",
     credentials: "include",
   });
@@ -107,3 +129,104 @@ export async function logoutUser(): Promise<void> {
     throw new Error(errorData?.detail || `Server error: ${response.status}`);
   }
 }
+
+export interface TimesheetPayload {
+  employeeEmail: string;
+  weekEnding: string;
+  claimMonth: string;
+  hours: {
+    day1: string;
+    day2: string;
+    day3: string;
+    day4: string;
+    day5: string;
+    day6: string;
+    day7: string;
+  };
+  status: string;
+  remarks: string;
+}
+
+export async function submitTimesheet(empId: string, payload: TimesheetPayload) {
+  const response = await fetch(`${API_BASE_URL2}/api/employee/${encodeURIComponent(empId)}/timesheet`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Server error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function getEmployeeSurveys(): Promise<SurveySummary[]> {
+  const response = await fetch("/api/employee/surveys", {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Server error: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const surveys = Array.isArray(payload?.data) ? payload.data : [];
+
+  return surveys.map((survey: SurveySummary & { status?: string }) => ({
+    ...survey,
+    status: normalizeSurveyStatus(survey.status),
+  }));
+}
+
+export async function getEmployeeSurveyById(
+  surveyId: string
+): Promise<SurveySummary> {
+  const response = await fetch(`/api/employee/surveys/${surveyId}`, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Server error: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const survey = payload?.data as SurveySummary & { status?: string };
+
+  return {
+    ...survey,
+    status: normalizeSurveyStatus(survey?.status),
+  };
+}
+
+export async function submitEmployeeSurveyResponse(
+  surveyId: string,
+  answers: SurveyAnswerInput[]
+): Promise<void> {
+  const response = await fetch(`/api/employee/surveys/${surveyId}/response`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ answers }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || `Server error: ${response.status}`);
+  }
+}
+
+
+

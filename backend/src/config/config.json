@@ -4,13 +4,13 @@
     "password": "YOUR_DB_PASSWORD",
     "database": "YOUR_DB_NAME",
     "host": "127.0.0.1",
-    "port": 5432,
-    "dialect": "postgres",
+    "port": 3306,
+    "dialect": "mysql",
     "logging": false
   },
   "production": {
     "use_env_variable": "DATABASE_URL",
-    "dialect": "postgres",
+    "dialect": "mysql",
     "logging": false
   }
 }

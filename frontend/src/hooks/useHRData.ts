@@ -7,6 +7,11 @@ import {
   HRUser,
   CreateJobPayload,
   UploadCVPayload,
+  InterviewSlot,
+  CreateInterviewSlotPayload,
+  Interview,
+  CreateScorecardPayload,
+  PipelineStageConfig,
 } from "@/types/hr";
 import {
   getJobById,
@@ -16,12 +21,27 @@ import {
   getPipelineStats,
   updateApplicationStatus,
   uploadCandidateCV,
+  getMyInterviewSlots,
+  createInterviewSlot,
+  deleteInterviewSlot,
+  getMyInterviews,
+  getScheduledInterviews,
+  submitScorecard,
+  updateJobPipeline,
 } from "@/services/hrApiClient";
 import { fetchCurrentHRUser, fetchHRJobs } from "@/lib/redux/features/hr/HRSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/redux";
 
+export interface InterviewerOption {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
 export function useHRCurrentUser() {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
   const user = useAppSelector((state) => state.hr.currentUser);
   const status = useAppSelector((state) => state.hr.currentUserStatus);
   const error = useAppSelector((state) => state.hr.currentUserError);
@@ -46,6 +66,7 @@ export function useHRCurrentUser() {
 
 export function useJobs() {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
   const jobs = useAppSelector((state) => state.hr.jobs);
   const status = useAppSelector((state) => state.hr.jobsStatus);
   const error = useAppSelector((state) => state.hr.jobsError);
@@ -82,7 +103,7 @@ export function useJob(jobId: string) {
       .finally(() => setIsLoading(false));
   }, [jobId]);
 
-  return { job, isLoading, error };
+  return { job, isLoading, error, setJob };
 }
 
 export function useApplications(jobId: string, status?: ApplicationStatus) {
@@ -111,7 +132,7 @@ export function useApplication(applicationId: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetch = useCallback(() => {
     if (!applicationId) return;
     setIsLoading(true);
     getApplicationById(applicationId)
@@ -120,7 +141,11 @@ export function useApplication(applicationId: string) {
       .finally(() => setIsLoading(false));
   }, [applicationId]);
 
-  return { application, isLoading, error };
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { application, isLoading, error, refetch: fetch };
 }
 
 export function usePipelineStats(jobId: string) {
@@ -144,12 +169,13 @@ export function useCreateJob(onSuccess?: (job: Job) => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.hr.currentUser);
 
   const submit = useCallback(async (payload: CreateJobPayload) => {
     setIsLoading(true);
     setError(null);
     try {
-      const job = await createJob(payload);
+      const job = await createJob(payload, currentUser?.email);
       onSuccess?.(job);
       void dispatch(fetchHRJobs());
     } catch (e: any) {
@@ -157,7 +183,7 @@ export function useCreateJob(onSuccess?: (job: Job) => void) {
     } finally {
       setIsLoading(false);
     }
-  }, [dispatch, onSuccess]);
+  }, [currentUser?.email, dispatch, onSuccess]);
 
   return { submit, isLoading, error };
 }
@@ -200,4 +226,180 @@ export function useUpdateApplicationStatus(onSuccess?: () => void) {
   }, [onSuccess]);
 
   return { submit, isLoading, error };
+}
+
+export function useMyInterviewSlots(userEmail?: string | null) {
+  const [slots, setSlots] = useState<InterviewSlot[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch = useCallback(() => {
+    if (!userEmail) return;
+    setIsLoading(true);
+    getMyInterviewSlots(userEmail)
+      .then(setSlots)
+      .catch((e) => setError(e.message))
+      .finally(() => setIsLoading(false));
+  }, [userEmail]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { slots, isLoading, error, refetch: fetch, setSlots };
+}
+
+export function useCreateInterviewSlot(onSuccess?: (slot: InterviewSlot) => void) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useCallback(async (userEmail: string, payload: CreateInterviewSlotPayload) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const slot = await createInterviewSlot(userEmail, payload);
+      onSuccess?.(slot);
+      return slot;
+    } catch (e: any) {
+      setError(e.message);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onSuccess]);
+
+  return { submit, isLoading, error };
+}
+
+export function useDeleteInterviewSlot(onSuccess?: () => void) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useCallback(async (userEmail: string, slotId: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await deleteInterviewSlot(userEmail, slotId);
+      onSuccess?.();
+    } catch (e: any) {
+      setError(e.message);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onSuccess]);
+
+  return { submit, isLoading, error };
+}
+
+export function useMyInterviews(userEmail?: string | null) {
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch = useCallback(() => {
+    if (!userEmail) return;
+    setIsLoading(true);
+    getMyInterviews(userEmail)
+      .then(setInterviews)
+      .catch((e) => setError(e.message))
+      .finally(() => setIsLoading(false));
+  }, [userEmail]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { interviews, isLoading, error, refetch: fetch, setInterviews };
+}
+
+export function useScheduledInterviews(userEmail?: string | null) {
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch = useCallback(() => {
+    if (!userEmail) return;
+    setIsLoading(true);
+    getScheduledInterviews(userEmail)
+      .then(setInterviews)
+      .catch((e) => setError(e.message))
+      .finally(() => setIsLoading(false));
+  }, [userEmail]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { interviews, isLoading, error, refetch: fetch, setInterviews };
+}
+
+export function useSubmitScorecard(onSuccess?: () => void) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useCallback(async (payload: CreateScorecardPayload, userEmail?: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await submitScorecard(payload, userEmail);
+      onSuccess?.();
+      return response;
+    } catch (e: any) {
+      setError(e.message);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onSuccess]);
+
+  return { submit, isLoading, error };
+}
+
+export function useUpdateJobPipeline(onSuccess?: (job: Job) => void) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useCallback(async (jobId: string, pipelineConfig: PipelineStageConfig[]) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const job = await updateJobPipeline(jobId, pipelineConfig);
+      onSuccess?.(job);
+      return job;
+    } catch (e: any) {
+      setError(e.message);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onSuccess]);
+
+  return { submit, isLoading, error };
+}
+export function useInterviewers() {
+  const [interviewers, setInterviewers] = useState<InterviewerOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    // FIX: Change this to match the Next.js API route, NOT the backend route!
+    fetch("/api/hr/interviewers") 
+      .then((res) => {
+        console.log("Response Status:", res.status); 
+        return res.json();
+      })
+      .then((response) => {
+        console.log("Raw Backend Data:", response); 
+        setInterviewers(response.data || []);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch interviewers", err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  return { interviewers, isLoading };
 }

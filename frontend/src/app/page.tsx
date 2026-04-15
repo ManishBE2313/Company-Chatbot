@@ -93,7 +93,7 @@ import { useRouter } from "next/navigation";
 import FloatingChatWidget from "@/components/chat/FloatingChatWidget";
 import { policiesData } from "@/data/policies";
 import { Power, ShieldCheck } from "lucide-react";
-import { logoutUser, getCurrentUser } from "@/services/apiClient";
+import { logoutUser, getCurrentUser, getEmployeeDetails } from "@/services/apiClient";
 
 export default function Home() {
   const router = useRouter();
@@ -104,15 +104,32 @@ export default function Home() {
 
   // Fetch role so we can conditionally show the HR Portal link.
   // Reuses the existing getCurrentUser call from apiClient.ts — no new endpoint needed.
-  const [userRole, setUserRole] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    getCurrentUser()
-      .then((u) => setUserRole(u.role ?? "employee"))
-      .catch(() => setUserRole("employee"));
-  }, []);
-
-  const isAdmin = userRole === "admin" || userRole === "superadmin";
-
+ const [user, setUser] = React.useState<{
+  id: string;
+  email: string | null;
+  role: string;
+} | null>(null);
+React.useEffect(() => {
+  Promise.all([getCurrentUser(), getEmployeeDetails().catch(() => null)])
+    .then(([u, employee]) =>
+      setUser({
+        id: employee?.id ?? "",
+        email: u.email,
+        role: u.role ?? "employee",
+      })
+    )
+    .catch(() =>
+      setUser({
+        id: "",
+        email: "",
+        role: "employee",
+      })
+    );
+}, []);
+   const userId = user?.id;
+  const userRole = user?.role;
+  const canAccessHRPortal = userRole === "interviewer" || userRole === "admin" || userRole === "superadmin";
+  const canAccessEmployeePortal = userRole === "user" || userRole === "admin" || userRole === "superadmin"; // role to be changed to employee
   const activePolicy =
     policiesData.find((p) => p.id === activePolicyId) || policiesData[0];
 
@@ -190,9 +207,19 @@ export default function Home() {
           <div className="text-[11px] font-bold tracking-wider text-slate-400 mb-4 px-2 uppercase">
             User
           </div>
+          {canAccessEmployeePortal && (
+            <button
+              onClick={() => userId && router.push(`/employee/${userId}`)}
+              disabled={!userId}
+              className="flex items-center gap-3 px-2 py-2 w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors text-[14px] font-medium mb-1"
+            >
+              <ShieldCheck size={16} className="text-indigo-500" />
+              <span>Employee Portal</span>
+            </button>
+          )}
 
-          {/* HR Portal button — only shown to admin / superadmin */}
-          {isAdmin && (
+          {/* HR Portal button — shown to interviewer / admin / superadmin */}
+          {canAccessHRPortal && (
             <button
               onClick={() => router.push("/hr")}
               className="flex items-center gap-3 px-2 py-2 w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors text-[14px] font-medium mb-1"

@@ -1,13 +1,14 @@
 import os
 import json
 from typing import Optional
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from api.security import is_prompt_injection
 from ai.orchestrator.graph import build_graph
@@ -16,6 +17,9 @@ from api.dependencies import get_current_user
 from api.candidate_intake import router as candidate_intake_router
 from api.hr_jobs import router as hr_jobs_router
 from api.job_setup import router as job_setup_router
+from api.batch_intake import router as batch_intake_router
+from api.job_evaluate import router as job_evaluate_router
+from api.settings_ai import router as settings_ai_router
 
 app = FastAPI(
     title="Knowledge AI API",
@@ -27,6 +31,9 @@ app.include_router(auth_router)
 app.include_router(candidate_intake_router)
 app.include_router(hr_jobs_router)
 app.include_router(job_setup_router)
+app.include_router(batch_intake_router)
+app.include_router(job_evaluate_router)
+app.include_router(settings_ai_router)
 
 @app.get("/", include_in_schema=False)
 def read_root():
@@ -34,9 +41,9 @@ def read_root():
 
 cors_origins_str = os.getenv(
     "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000"
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000"
 )
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").strip()
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3001").strip()
 
 configured_origins = [
     origin.strip()
@@ -111,7 +118,7 @@ async def chat_endpoint(request: ChatRequest, user: dict = Depends(get_current_u
 @app.get("/api/user/me")
 async def get_current_user_profile(user: dict = Depends(get_current_user)):
     return {
-        "email": user.get("sub"),
+        "email": user.get("email") or user.get("sub"),
         "role": user.get("role"),
         "is_sso": user.get("is_sso", False),
     }

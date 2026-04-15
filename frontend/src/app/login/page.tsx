@@ -21,7 +21,9 @@ export default function LoginPage() {
   const handleMicrosoftLogin = () => {
     setIsLoading(true);
     const BACKEND_AUTH_BASE_URL =
-      process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:3000";
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://127.0.0.1:8000";
     window.location.href = BACKEND_AUTH_BASE_URL + "/api/auth/sso/login";
   };
 

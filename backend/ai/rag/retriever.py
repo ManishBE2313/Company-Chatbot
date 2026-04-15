@@ -5,9 +5,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
-from langchain_classic.retrievers import ContextualCompressionRetriever
-from langchain_classic.retrievers.document_compressors import CrossEncoderReranker
-from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+# from langchain_classic.retrievers import ContextualCompressionRetrieverfrom langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import CrossEncoderReranker
+from sentence_transformers import CrossEncoder
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder 
 
 COLLECTION_NAME = "company_documents"
 

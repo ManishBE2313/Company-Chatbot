@@ -9,4 +9,5 @@ router.get("/",  auth, ApplicationController.listAllApplications);
 router.get("/:applicationId", auth, ApplicationController.getApplicationById);
 router.patch("/:applicationId/status", auth, ApplicationController.updateApplicationStatus);
 
+
 export default router;

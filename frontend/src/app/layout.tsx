@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "react-hot-toast";
 import { StoreProvider } from "@/lib/redux/StoreProvider";
 import "./globals.css";
 
@@ -21,8 +22,13 @@ export default function RootLayout({
         className={`${inter.className} bg-slate-50 text-slate-900 antialiased selection:bg-indigo-200 selection:text-indigo-900`}
         suppressHydrationWarning
       >
-        <StoreProvider>{children}</StoreProvider>
+        <StoreProvider>
+          {children}
+          <Toaster />
+        </StoreProvider>
       </body>
     </html>
   );
 }
+
+

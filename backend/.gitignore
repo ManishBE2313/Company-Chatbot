@@ -84,3 +84,5 @@ coverage/
 .Trashes
 ehthumbs.db
 Thumbs.db
+uploads/
+api/.env
